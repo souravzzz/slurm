@@ -1042,7 +1042,7 @@ empty:
 					continue;
 				loc_asset_rec = slurmdb_copy_asset_rec(
 					asset_rec);
-				loc_asset_rec->count = slurm_atoul(row[i]);
+				loc_asset_rec->count = slurm_atoull(row[i]);
 				list_append(event->assets, loc_asset_rec);
 			}
 		}
@@ -1099,15 +1099,15 @@ extern int as_mysql_node_down(mysql_conn_t *mysql_conn,
 			xstrfmtcat(asset_values,
 				   "insert into \"%s_%s\" "
 				   "(inx, id_asset, count) values "
-				   "(LAST_INSERT_ID(), %u, %u)",
+				   "(LAST_INSERT_ID(), %u, %"PRIu64")",
 				   mysql_conn->cluster_name,
 				   event_ext_table,
 				   asset_rec->id, asset_rec->count);
 		else
 			xstrfmtcat(asset_values,
-				   ", (LAST_INSERT_ID(), %u, %u)",
+				   ", (LAST_INSERT_ID(), %u, %"PRIu64")",
 				   asset_rec->id, asset_rec->count);
-		debug("inserting %s(%s) with asset %u count of %u",
+		debug("inserting %s(%s) with asset %u count of %"PRIu64"",
 		       node_ptr->name, mysql_conn->cluster_name,
 		       asset_rec->id, asset_rec->count);
 	}
@@ -1303,13 +1303,13 @@ extern int as_mysql_fini_ctld(mysql_conn_t *mysql_conn,
 			xstrfmtcat(asset_values,
 				   "insert into \"%s_%s\" "
 				   "(inx, id_asset, count) values "
-				   "(LAST_INSERT_ID(), %u, %u)",
+				   "(LAST_INSERT_ID(), %u, %"PRIu64")",
 				   cluster_rec->name,
 				   event_ext_table,
 				   asset_rec->id, asset_rec->count);
 		else
 			xstrfmtcat(asset_values,
-				   ", (LAST_INSERT_ID(), %u, %u)",
+				   ", (LAST_INSERT_ID(), %u, %"PRIu64")",
 				   asset_rec->id, asset_rec->count);
 	}
 	list_iterator_destroy(itr);
@@ -1373,13 +1373,14 @@ extern int as_mysql_cluster_assets(mysql_conn_t *mysql_conn,
 				xstrfmtcat(asset_values,
 					   "insert into \"%s_%s\" "
 					   "(inx, id_asset, count) values "
-					   "(LAST_INSERT_ID(), %u, %u)",
+					   "(LAST_INSERT_ID(), %u, %"PRIu64")",
 					   mysql_conn->cluster_name,
 					   event_ext_table,
 					   asset_rec->id, asset_rec->count);
 			else
 				xstrfmtcat(asset_values,
-					   ", (LAST_INSERT_ID(), %u, %u)",
+					   ", (LAST_INSERT_ID(), "
+					   "%u, %"PRIu64")",
 					   asset_rec->id, asset_rec->count);
 		}
 		list_iterator_destroy(itr);
@@ -1448,21 +1449,22 @@ extern int as_mysql_cluster_assets(mysql_conn_t *mysql_conn,
 			if (!row[i] || !row[i][0])
 				continue;
 			loc_asset_rec = slurmdb_copy_asset_rec(asset_rec);
-			loc_asset_rec->count = slurm_atoul(row[i]);
+			loc_asset_rec->count = slurm_atoull(row[i]);
 			list_append(*assets, loc_asset_rec);
 			xstrfmtcat(asset_query, ", ext_%u", loc_asset_rec->id);
 			if (!asset_values)
 				xstrfmtcat(asset_values,
 					   "insert into \"%s_%s\" "
 					   "(inx, id_asset, count) values "
-					   "(LAST_INSERT_ID(), %u, %u)",
+					   "(LAST_INSERT_ID(), %u, %"PRIu64")",
 					   mysql_conn->cluster_name,
 					   event_ext_table,
 					   loc_asset_rec->id,
 					   loc_asset_rec->count);
 			else
 				xstrfmtcat(asset_values,
-					   ", (LAST_INSERT_ID(), %u, %u)",
+					   ", (LAST_INSERT_ID(), "
+					   "%u, %"PRIu64")",
 					   loc_asset_rec->id,
 					   loc_asset_rec->count);
 		}
@@ -1483,7 +1485,7 @@ extern int as_mysql_cluster_assets(mysql_conn_t *mysql_conn,
 				continue;
 			}
 
-			if (slurm_atoul(row[i]) == asset_rec->count) {
+			if (slurm_atoull(row[i]) == asset_rec->count) {
 				if (debug_flags & DEBUG_FLAG_DB_EVENT)
 					DB_DEBUG(mysql_conn->conn,
 						 "we have the same count as "
@@ -1493,7 +1495,8 @@ extern int as_mysql_cluster_assets(mysql_conn_t *mysql_conn,
 						 asset_rec->id,
 						 mysql_conn->cluster_name);
 			} else {
-				debug("%s has changed asset %d from %s to %u",
+				debug("%s has changed asset %d "
+				      "from %s to %"PRIu64"",
 				      mysql_conn->cluster_name, asset_rec->id,
 				      row[i], asset_rec->count);
 				update = 1;
@@ -1624,7 +1627,7 @@ extern int as_mysql_cluster_get_assets(mysql_conn_t *mysql_conn,
 			if (!row[i] || !row[i][0])
 				continue;
 			loc_asset_rec = slurmdb_copy_asset_rec(asset_rec);
-			loc_asset_rec->count = slurm_atoul(row[i]);
+			loc_asset_rec->count = slurm_atoull(row[i]);
 			list_append(cluster_rec->assets, loc_asset_rec);
 		}
 		list_iterator_reset(itr);

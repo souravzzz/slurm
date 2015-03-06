@@ -493,7 +493,7 @@ static int _unpack_local_event(local_event_t *object,
 		asset_rec->id = ASSET_CPU;
 		list_append(object->assets, asset_rec);
 		unpackstr_ptr(&tmp_char, &tmp32, buffer);
-		asset_rec->count = slurm_atoul(tmp_char);
+		asset_rec->count = slurm_atoull(tmp_char);
 		xfree(tmp_char);
 		unpackstr_ptr(&object->node_name, &tmp32, buffer);
 		unpackstr_ptr(&object->period_end, &tmp32, buffer);
@@ -1530,7 +1530,7 @@ static uint32_t _archive_events(mysql_conn_t *mysql_conn, char *cluster_name,
 			if (!row[i] || !row[i][0])
 				continue;
 			loc_asset_rec = slurmdb_copy_asset_rec(asset_rec);
-			loc_asset_rec->count = slurm_atoul(row[i]);
+			loc_asset_rec->count = slurm_atoull(row[i]);
 			list_append(event.assets, loc_asset_rec);
 		}
 
@@ -1607,14 +1607,14 @@ _load_events(uint16_t rpc_version, Buf buffer, char *cluster_name,
 		while ((asset_rec = list_next(itr))) {
 			if (asset_values) {
 				xstrfmtcat(asset_values,
-					   ", (%s, %u, %u)",
+					   ", (%s, %u, %"PRIu64")",
 					   inx, asset_rec->id,
 					   asset_rec->count);
 			} else {
 				xstrfmtcat(asset_values,
 					   "insert into \"%s_%s\" "
 					   "(inx, id_asset, count) values "
-					   "(%s, %u, %u)",
+					   "(%s, %u, %"PRIu64")",
 					   cluster_name, event_ext_table,
 					   inx, asset_rec->id,
 					   asset_rec->count);

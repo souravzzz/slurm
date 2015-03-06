@@ -2905,7 +2905,7 @@ slurmdbd_pack_cluster_assets_msg(dbd_cluster_assets_msg_t *msg,
 		}
 		list_iterator_destroy(itr);
 		if (asset_rec)
-			count = asset_rec->count;
+			count = (uint32_t)asset_rec->count;
 		else
 			count = 0;
 		pack32(count, buffer);
@@ -2949,7 +2949,7 @@ slurmdbd_unpack_cluster_assets_msg(dbd_cluster_assets_msg_t **msg,
 		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
 		asset_rec->id = ASSET_CPU;
 		list_append(msg_ptr->assets, asset_rec);
-		safe_unpack32(&asset_rec->count, buffer);
+		safe_unpack32((uint32_t *)&asset_rec->count, buffer);
 		safe_unpack_time(&msg_ptr->event_time, buffer);
 	}
 
@@ -3561,12 +3561,12 @@ slurmdbd_unpack_job_start_msg(void **msg,
 		msg_ptr->assets = list_create(slurmdb_destroy_asset_rec);
 		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
 		asset_rec->id = ASSET_CPU;
-		asset_rec->count = msg_ptr->alloc_cpus;
+		asset_rec->count = (uint64_t)msg_ptr->alloc_cpus;
 		list_append(msg_ptr->assets, asset_rec);
 
 		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
 		asset_rec->id = ASSET_MEM;
-		asset_rec->count = msg_ptr->req_mem;
+		asset_rec->count = (uint64_t)msg_ptr->req_mem;
 		list_append(msg_ptr->assets, asset_rec);
 	}
 
@@ -4003,7 +4003,7 @@ slurmdbd_pack_node_state_msg(dbd_node_state_msg_t *msg,
 			list_iterator_destroy(itr);
 		}
 		if (asset_rec)
-			count = asset_rec->count;
+			count = (uint32_t)asset_rec->count;
 		else
 			count = 0;
 		pack32(count, buffer);
@@ -4023,7 +4023,7 @@ slurmdbd_pack_node_state_msg(dbd_node_state_msg_t *msg,
 			list_iterator_destroy(itr);
 		}
 		if (asset_rec)
-			count = asset_rec->count;
+			count = (uint32_t)asset_rec->count;
 		else
 			count = 0;
 		pack32(count, buffer);
@@ -4076,7 +4076,7 @@ slurmdbd_unpack_node_state_msg(dbd_node_state_msg_t **msg,
 		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
 		asset_rec->id = ASSET_CPU;
 		list_append(msg_ptr->assets, asset_rec);
-		safe_unpack32(&asset_rec->count, buffer);
+		safe_unpack32((uint32_t *)&asset_rec->count, buffer);
 		safe_unpackstr_xmalloc(&msg_ptr->hostlist, &uint32_tmp, buffer);
 		safe_unpackstr_xmalloc(&msg_ptr->reason,   &uint32_tmp, buffer);
 		safe_unpack32(&msg_ptr->reason_uid, buffer);
@@ -4088,7 +4088,7 @@ slurmdbd_unpack_node_state_msg(dbd_node_state_msg_t **msg,
 		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
 		asset_rec->id = ASSET_CPU;
 		list_append(msg_ptr->assets, asset_rec);
-		safe_unpack32(&asset_rec->count, buffer);
+		safe_unpack32((uint32_t *)&asset_rec->count, buffer);
 		safe_unpackstr_xmalloc(&msg_ptr->hostlist, &uint32_tmp, buffer);
 		safe_unpackstr_xmalloc(&msg_ptr->reason,   &uint32_tmp, buffer);
 		safe_unpack32(&msg_ptr->reason_uid, buffer);

@@ -649,17 +649,18 @@ no_rollup_change:
 				xstrfmtcat(query,
 					   "insert into \"%s_%s\" "
 					   "(job_db_inx, id_asset, count) "
-					   "values (%u, %u, %u)",
+					   "values (%u, %u, %"PRIu64")",
 					   mysql_conn->cluster_name,
 					   job_ext_table,
 					   job_ptr->db_index,
 					   asset_rec->id, asset_rec->count);
 			else
 				xstrfmtcat(query,
-					   ", (%u, %u, %u)",
+					   ", (%u, %u, %"PRIu64")",
 					   job_ptr->db_index,
 					   asset_rec->id, asset_rec->count);
-			debug("inserting %s(%s) with asset %u count of %u",
+			debug("inserting %s(%s) with asset %u "
+			      "count of %"PRIu64"",
 			      job_ptr->name, mysql_conn->cluster_name,
 			      asset_rec->id, asset_rec->count);
 		}

@@ -556,7 +556,7 @@ extern int slurmdb_unpack_cluster_accounting_rec(void **object,
 		 * unpack shouldn't ever happen in practice.
 		 */
 		safe_unpack64(&tmp_64, buffer);
-		safe_unpack32(&object_ptr->asset_rec.count, buffer);
+		safe_unpack32((uint32_t *)&object_ptr->asset_rec.count, buffer);
 		safe_unpack64(&object_ptr->down_secs, buffer);
 		safe_unpack64(&object_ptr->idle_secs, buffer);
 		safe_unpack64(&object_ptr->over_secs, buffer);
@@ -731,7 +731,7 @@ extern void slurmdb_pack_cluster_rec(void *in, uint16_t rpc_version, Buf buffer)
 		}
 		list_iterator_destroy(itr);
 		if (asset_rec)
-			count = asset_rec->count;
+			count = (uint32_t)asset_rec->count;
 		else
 			count = 0;
 		pack32(count, buffer);
@@ -835,7 +835,7 @@ extern int slurmdb_unpack_cluster_rec(void **object, uint16_t rpc_version,
 		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
 		asset_rec->id = ASSET_CPU;
 		list_push(object_ptr->assets, asset_rec);
-		safe_unpack32(&asset_rec->count, buffer);
+		safe_unpack32((uint32_t *)&asset_rec->count, buffer);
 
 		safe_unpack16(&object_ptr->dimensions, buffer);
 		safe_unpack32(&object_ptr->flags, buffer);
@@ -1220,7 +1220,7 @@ extern void slurmdb_pack_event_rec(void *in, uint16_t rpc_version, Buf buffer)
 		}
 		list_iterator_destroy(itr);
 		if (asset_rec)
-			count = asset_rec->count;
+			count = (uint32_t)asset_rec->count;
 		else
 			count = 0;
 		pack32(count, buffer);
@@ -1280,7 +1280,7 @@ extern int slurmdb_unpack_event_rec(void **object, uint16_t rpc_version,
 		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
 		asset_rec->id = ASSET_CPU;
 		list_push(object_ptr->assets, asset_rec);
-		safe_unpack32(&asset_rec->count, buffer);
+		safe_unpack32((uint32_t *)&asset_rec->count, buffer);
 		safe_unpack16(&object_ptr->event_type, buffer);
 		safe_unpackstr_xmalloc(&object_ptr->node_name,
 				       &uint32_tmp, buffer);
@@ -1992,14 +1992,14 @@ extern void slurmdb_pack_asset_cond(void *in, uint16_t rpc_version, Buf buffer)
 	char *tmp_info = NULL;
 
 	if (!object) {
-		pack32(NO_VAL, buffer);
+		pack64(NO_VAL, buffer);
 		pack32(NO_VAL, buffer);
 		pack32(NO_VAL, buffer);
 		pack32(NO_VAL, buffer);
 		return;
 	}
 
-	pack32(object->count, buffer);
+	pack64(object->count, buffer);
 
 	if (object->id_list)
 		count = list_count(object->id_list);
@@ -2056,7 +2056,7 @@ extern int slurmdb_unpack_asset_cond(void **object, uint16_t rpc_version,
 
 	*object = object_ptr;
 
-	safe_unpack32(&object_ptr->count, buffer);
+	safe_unpack64(&object_ptr->count, buffer);
 
 	safe_unpack32(&count, buffer);
 	if (count != NO_VAL) {
@@ -2110,14 +2110,14 @@ extern void slurmdb_pack_asset_rec(void *in, uint16_t rpc_version, Buf buffer)
 	slurmdb_asset_rec_t *object = (slurmdb_asset_rec_t *)in;
 
 	if (!object) {
-		pack32(0, buffer);
+		pack64(0, buffer);
 		pack32(0, buffer);
 		packnull(buffer);
 		packnull(buffer);
 		return;
 	}
 
-	pack32(object->count, buffer);
+	pack64(object->count, buffer);
 	pack32(object->id, buffer);
 	packstr(object->name, buffer);
 	packstr(object->type, buffer);
@@ -2128,7 +2128,7 @@ extern int slurmdb_unpack_asset_rec_noalloc(
 {
 	uint32_t uint32_tmp;
 
-	safe_unpack32(&object_ptr->count, buffer);
+	safe_unpack64(&object_ptr->count, buffer);
 	safe_unpack32(&object_ptr->id, buffer);
 	safe_unpackstr_xmalloc(&object_ptr->name, &uint32_tmp, buffer);
 	safe_unpackstr_xmalloc(&object_ptr->type, &uint32_tmp, buffer);

@@ -1926,9 +1926,12 @@ extern void set_cluster_assets(void)
 		asset_rec->id = mem_asset->id;
 		asset_rec->count = mem_count / 1024; /* convert to GB */
 		list_append(node_ptr->assets, asset_rec);
+
+		/* FIXME: handle gres assets here as well */
 	}
 	mem_asset->count /= 1024; /* convert to GB */
-	/* FIXME: This probably needs to be removed and handled
+
+	/* FIXME: cluster_cpus probably needs to be removed and handled
 	 * differently in the spots this is used.
 	 */
 	cluster_cpus = cpu_asset->count;

@@ -2830,7 +2830,7 @@ extern char *slurmdb_make_asset_string(List assets)
 	while ((asset_rec = list_next(itr))) {
 		if (asset_str)
 			xstrcat(asset_str, ",");
-		xstrfmtcat(asset_str, "%s%s%s=%u",
+		xstrfmtcat(asset_str, "%s%s%s=%"PRIu64"",
 			   asset_rec->type,
 			   asset_rec->name ? ":" : "",
 			   asset_rec->name ? asset_rec->name : "",

@@ -229,7 +229,7 @@ typedef struct {
 	uint64_t alloc_secs; /* total amount of secs allocated if used in an
 				accounting_list, DON'T PACK */
 	uint32_t rec_count;  /* number of records alloc_secs is, DON'T PACK */
-	uint32_t count; /* Count of asset on a given cluster, 0 if
+	uint64_t count; /* Count of asset on a given cluster, 0 if
 			   listed generically. */
 	uint32_t id;    /* Database ID for the asset */
 	char *name;     /* Name of asset if type is generic like GRES
@@ -417,8 +417,8 @@ typedef struct {
 } slurmdb_archive_rec_t;
 
 typedef struct {
-	uint32_t count;  /* Count of asset on a given cluster, 0 if
-			   listed generically. */
+	uint64_t count;  /* Count of asset on a given cluster, 0 if
+			    listed generically. */
 	List id_list;    /* Database ID */
 	List name_list;  /* Name of asset if type is generic like GRES
 			    or License. */
