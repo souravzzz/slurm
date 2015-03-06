@@ -2472,6 +2472,8 @@ extern uint64_t gres_get_system_cnt(char *name)
 	if (!name)
 		return 0;
 
+	(void) gres_plugin_init();
+
 	slurm_mutex_lock(&gres_context_lock);
 	for (i=0; i < gres_context_cnt; i++) {
 		if (!strcmp(gres_context[i].gres_name, name)) {
@@ -2483,6 +2485,44 @@ extern uint64_t gres_get_system_cnt(char *name)
 	return count;
 }
 
+
+/*
+ * Get the count of a node's GRES
+ * IN gres_list - List of Gres records for this node to track usage
+ * IN name - name of gres
+ */
+extern uint64_t gres_plugin_node_config_cnt(List gres_list, char *name)
+{
+	int i;
+	ListIterator gres_iter;
+	gres_state_t *gres_ptr;
+	uint64_t count = 0;
+
+	if (!gres_list || !name || !list_count(gres_list))
+		return count;
+
+	(void) gres_plugin_init();
+
+	slurm_mutex_lock(&gres_context_lock);
+	for (i=0; i < gres_context_cnt; i++) {
+		if (strcmp(gres_context[i].gres_name, name))
+			continue;
+		/* Find or create gres_state entry on the list */
+		gres_iter = list_iterator_create(gres_list);
+		while ((gres_ptr = list_next(gres_iter))) {
+			if (gres_ptr->plugin_id == gres_context[i].plugin_id)
+				break;
+		}
+		list_iterator_destroy(gres_iter);
+		if (gres_ptr && gres_ptr->gres_data)
+			count = ((gres_node_state_t *)(gres_ptr->gres_data))->
+				gres_cnt_config;
+		break;
+	}
+	slurm_mutex_unlock(&gres_context_lock);
+
+	return count;
+}
 
 static void _job_state_delete(void *gres_data)
 {

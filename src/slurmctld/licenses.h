@@ -137,4 +137,10 @@ get_all_license_info(char **buffer_ptr,
                      uid_t uid,
                      uint16_t protocol_version);
 
+/*
+ * get_total_license_cnt - give me the total count of a given license name.
+ *
+ */
+extern uint32_t get_total_license_cnt(char *name);
+
 #endif /* !_LICENSES_H */

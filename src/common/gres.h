@@ -354,6 +354,13 @@ extern char *gres_get_node_used(List gres_list);
 extern uint64_t gres_get_system_cnt(char *name);
 
 /*
+ * Get the count of a node's GRES
+ * IN gres_list - List of Gres records for this node to track usage
+ * IN name - name of gres
+ */
+extern uint64_t gres_plugin_node_config_cnt(List gres_list, char *name);
+
+/*
  * Fill in an array of GRES type ids contained within the given node gres_list
  *		and an array of corresponding counts of those GRES types.
  * IN gres_list - a List of GRES types found on a node.

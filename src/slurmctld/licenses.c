@@ -812,6 +812,34 @@ get_all_license_info(char **buffer_ptr,
 	buffer_ptr[0] = xfer_buf_data(buffer);
 }
 
+static int _gres_find_lic_by_name(void *x, void *key)
+{
+	licenses_t *lic = (licenses_t *)x;
+
+	if (!strcmp(lic->name, (char *)key))
+		return 1;
+
+	return 0;
+}
+
+extern uint32_t get_total_license_cnt(char *name)
+{
+	uint32_t count = 0;
+	licenses_t *lic;
+
+	slurm_mutex_lock(&license_mutex);
+	if (license_list) {
+		lic = list_find_first(
+			license_list, _gres_find_lic_by_name, name);
+
+		if (lic)
+			count = lic->total;
+	}
+	slurm_mutex_unlock(&license_mutex);
+
+	return count;
+}
+
 /* pack_license()
  *
  * Encode the licenses data structure.

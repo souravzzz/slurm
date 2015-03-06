@@ -1856,6 +1856,27 @@ extern void send_all_to_accounting(time_t event_time)
 	send_resvs_to_accounting();
 }
 
+static int _add_node_gres_asset(void *x, void *arg)
+{
+	slurmdb_asset_rec_t *asset_rec_in = (slurmdb_asset_rec_t *)x;
+	struct node_record *node_ptr = (struct node_record *)arg;
+	slurmdb_asset_rec_t *asset_rec;
+
+	xassert(asset_rec_in);
+	xassert(asset_list);
+
+	if (strcmp(asset_rec_in->type, "gres"))
+		return 0;
+
+	asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
+	asset_rec->id = asset_rec_in->id;
+	asset_rec->count = gres_plugin_node_config_cnt(
+		node_ptr->gres_list, asset_rec_in->name);
+	list_append(node_ptr->assets, asset_rec);
+
+	return 0;
+}
+
 /* A slurmctld lock needs to at least have a node read lock set before
  * this is called */
 extern void set_cluster_assets(void)
@@ -1885,6 +1906,10 @@ extern void set_cluster_assets(void)
 			continue;
 		} else if (!strcmp(asset_rec->type, "gres")) {
 			asset_rec->count = gres_get_system_cnt(asset_rec->name);
+			continue;
+		} else if (!strcmp(asset_rec->type, "license")) {
+			asset_rec->count = get_total_license_cnt(
+				asset_rec->name);
 			continue;
 		}
 		/* FIXME: set up the other assets here that aren't specific */
@@ -1927,7 +1952,7 @@ extern void set_cluster_assets(void)
 		asset_rec->count = mem_count / 1024; /* convert to GB */
 		list_append(node_ptr->assets, asset_rec);
 
-		/* FIXME: handle gres assets here as well */
+		list_for_each(asset_list, _add_node_gres_asset, node_ptr);
 	}
 	mem_asset->count /= 1024; /* convert to GB */
 
