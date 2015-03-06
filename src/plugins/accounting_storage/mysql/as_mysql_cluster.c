@@ -1093,8 +1093,12 @@ extern int as_mysql_node_down(mysql_conn_t *mysql_conn,
 
 	itr = list_iterator_create(node_ptr->assets);
 	while ((asset_rec = list_next(itr))) {
-		if (!asset_rec->id)
+		if (!asset_rec->id) {
+			error("asset given, but it doesn't "
+			      "have an id count is %"PRIu64,
+			      asset_rec->count);
 			continue;
+		}
 		if (!asset_values)
 			xstrfmtcat(asset_values,
 				   "insert into \"%s_%s\" "
@@ -1107,7 +1111,7 @@ extern int as_mysql_node_down(mysql_conn_t *mysql_conn,
 			xstrfmtcat(asset_values,
 				   ", (LAST_INSERT_ID(), %u, %"PRIu64")",
 				   asset_rec->id, asset_rec->count);
-		debug("inserting %s(%s) with asset %u count of %"PRIu64"",
+		debug3("inserting %s(%s) with asset %u count of %"PRIu64"",
 		       node_ptr->name, mysql_conn->cluster_name,
 		       asset_rec->id, asset_rec->count);
 	}
@@ -1147,7 +1151,7 @@ extern int as_mysql_node_down(mysql_conn_t *mysql_conn,
 		   node_ptr->name, node_ptr->node_state,
 		   event_time, my_reason, reason_uid, asset_values);
 	xfree(asset_values);
-	debug("%d(%s:%d) query\n%s",
+	debug2("%d(%s:%d) query\n%s",
 	       mysql_conn->conn, THIS_FILE, __LINE__, query);
 	rc = mysql_db_query(mysql_conn, query);
 	xfree(query);
