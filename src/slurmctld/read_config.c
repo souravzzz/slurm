@@ -572,24 +572,24 @@ static int _init_assets(void)
 		if (!strcasecmp(temp_char, "cpu") ||
 		    !strcasecmp(temp_char, "mem") ||
 		    !strcasecmp(temp_char, "energy")) {
-		} else if (!strncasecmp(temp_char, "gres:", 5)) {
+		} else if (!strncasecmp(temp_char, "gres/", 5)) {
 			asset_rec->type[4] = '\0';
 			asset_rec->name = xstrdup(temp_char+5);
 			if (!asset_rec->name)
 				fatal("Gres type assets need to have a name, "
-				      "(i.e. Gres:GPU).  You gave %s",
+				      "(i.e. Gres/GPU).  You gave %s",
 				      temp_char);
-		} else if (!strncasecmp(temp_char, "license:", 8)) {
+		} else if (!strncasecmp(temp_char, "license/", 8)) {
 			asset_rec->type[7] = '\0';
 			asset_rec->name = xstrdup(temp_char+8);
 			if (!asset_rec->name)
 				fatal("License type assets need to "
-				      "have a name, (i.e. License:Foo).  "
+				      "have a name, (i.e. License/Foo).  "
 				      "You gave %s",
 				      temp_char);
 		} else {
 			fatal("Unknown asset type '%s', acceptiable types are "
-			      "CPU,Gres:,License:,Mem", temp_char);
+			      "CPU,Gres/,License/,Mem", temp_char);
 			xfree(asset_rec->type);
 			xfree(asset_rec);
 		}
@@ -601,7 +601,7 @@ static int _init_assets(void)
 					slurmdb_destroy_asset_rec);
 			info("Couldn't find asset %s%s%s in the database, "
 			     "creating.",
-			     asset_rec->type, asset_rec->name ? ":" : "",
+			     asset_rec->type, asset_rec->name ? "/" : "",
 			     asset_rec->name ? asset_rec->name : "");
 			list_append(add_list, asset_rec);
 		} else
@@ -628,7 +628,7 @@ static int _init_assets(void)
 				      "slurmdbd communicating with the "
 				      "slurmctld.",
 				      asset_rec->type,
-				      asset_rec->name ? ":" : "",
+				      asset_rec->name ? "/" : "",
 				      asset_rec->name ? asset_rec->name : "");
 			} else
 				list_append(asset_list, asset_rec);

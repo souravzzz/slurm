@@ -7046,7 +7046,7 @@ extern int job_update_asset_cnt(struct job_record *job_ptr, int node_inx)
 				error("job_update_asset_cnt: asset %s%s%s(%u) "
 				      "underflow on job_id %u",
 				      asset_rec->type,
-				      asset_rec->name ? ":" : "",
+				      asset_rec->name ? "/" : "",
 				      asset_rec->name ? asset_rec->name : "",
 				      asset_rec->id,
 				      job_ptr->job_id);

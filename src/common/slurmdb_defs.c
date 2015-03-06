@@ -2832,7 +2832,7 @@ extern char *slurmdb_make_asset_string(List assets)
 			xstrcat(asset_str, ",");
 		xstrfmtcat(asset_str, "%s%s%s=%"PRIu64"",
 			   asset_rec->type,
-			   asset_rec->name ? ":" : "",
+			   asset_rec->name ? "/" : "",
 			   asset_rec->name ? asset_rec->name : "",
 			   asset_rec->count);
 	}

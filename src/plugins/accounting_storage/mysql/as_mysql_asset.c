@@ -172,7 +172,7 @@ extern int as_mysql_add_assets(mysql_conn_t *mysql_conn,
 			if (!object->name) {
 				error("%s type assets "
 				      "need to have a name, "
-				      "(i.e. Gres:GPU).  You gave none",
+				      "(i.e. Gres/GPU).  You gave none",
 				      object->type);
 				rc = SLURM_ERROR;
 				continue;
@@ -200,7 +200,7 @@ extern int as_mysql_add_assets(mysql_conn_t *mysql_conn,
 		xfree(query);
 		if (!object->id) {
 			error("Couldn't add asset %s%s%s", object->type,
-			      object->name ? ":" : "",
+			      object->name ? "/" : "",
 			      object->name ? object->name : "");
 			xfree(cols);
 			xfree(extra);
