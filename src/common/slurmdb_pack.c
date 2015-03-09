@@ -475,7 +475,7 @@ extern void slurmdb_pack_cluster_accounting_rec(void *in, uint16_t rpc_version,
 	if (rpc_version >= SLURM_15_08_PROTOCOL_VERSION) {
 		if (!object) {
 			pack64(0, buffer);
-			slurmdb_pack_asset_rec(NULL, rpc_version, buffer);
+			slurmdb_pack_tres_rec(NULL, rpc_version, buffer);
 			pack64(0, buffer);
 			pack64(0, buffer);
 			pack64(0, buffer);
@@ -487,7 +487,7 @@ extern void slurmdb_pack_cluster_accounting_rec(void *in, uint16_t rpc_version,
 		}
 
 		pack64(object->alloc_secs, buffer);
-		slurmdb_pack_asset_rec(&object->asset_rec, rpc_version, buffer);
+		slurmdb_pack_tres_rec(&object->tres_rec, rpc_version, buffer);
 		pack64(object->down_secs, buffer);
 		pack64(object->idle_secs, buffer);
 		pack64(object->over_secs, buffer);
@@ -495,10 +495,10 @@ extern void slurmdb_pack_cluster_accounting_rec(void *in, uint16_t rpc_version,
 		pack_time(object->period_start, buffer);
 		pack64(object->resv_secs, buffer);
 	} else if (rpc_version >= SLURM_14_03_PROTOCOL_VERSION) {
-		/* We only want to send the CPU asset to older
+		/* We only want to send the CPU tres to older
 		   versions of SLURM.
 		*/
-		if (!object || (object->asset_rec.id != ASSET_CPU)) {
+		if (!object || (object->tres_rec.id != TRES_CPU)) {
 			pack64(0, buffer);
 			pack64(0, buffer);
 			pack32(0, buffer);
@@ -514,7 +514,7 @@ extern void slurmdb_pack_cluster_accounting_rec(void *in, uint16_t rpc_version,
 		pack64(object->alloc_secs, buffer);
 		pack64(0, buffer); /* consumed energy doesn't exist
 				      anymore */
-		pack32(object->asset_rec.count, buffer);
+		pack32(object->tres_rec.count, buffer);
 		pack64(object->down_secs, buffer);
 		pack64(object->idle_secs, buffer);
 		pack64(object->over_secs, buffer);
@@ -535,8 +535,8 @@ extern int slurmdb_unpack_cluster_accounting_rec(void **object,
 
 	if (rpc_version >= SLURM_15_08_PROTOCOL_VERSION) {
 		safe_unpack64(&object_ptr->alloc_secs, buffer);
-		if (slurmdb_unpack_asset_rec_noalloc(
-			    &object_ptr->asset_rec, rpc_version, buffer)
+		if (slurmdb_unpack_tres_rec_noalloc(
+			    &object_ptr->tres_rec, rpc_version, buffer)
 		    != SLURM_SUCCESS)
 			goto unpack_error;
 		safe_unpack64(&object_ptr->down_secs, buffer);
@@ -547,8 +547,8 @@ extern int slurmdb_unpack_cluster_accounting_rec(void **object,
 		safe_unpack64(&object_ptr->resv_secs, buffer);
 	} else if (rpc_version >= SLURM_14_03_PROTOCOL_VERSION) {
 		uint64_t tmp_64;
-		object_ptr->asset_rec.id = ASSET_CPU;
-		object_ptr->asset_rec.name = xstrdup("cpu");
+		object_ptr->tres_rec.id = TRES_CPU;
+		object_ptr->tres_rec.name = xstrdup("cpu");
 
 		safe_unpack64(&object_ptr->alloc_secs, buffer);
 
@@ -556,7 +556,7 @@ extern int slurmdb_unpack_cluster_accounting_rec(void **object,
 		 * unpack shouldn't ever happen in practice.
 		 */
 		safe_unpack64(&tmp_64, buffer);
-		safe_unpack32((uint32_t *)&object_ptr->asset_rec.count, buffer);
+		safe_unpack32((uint32_t *)&object_ptr->tres_rec.count, buffer);
 		safe_unpack64(&object_ptr->down_secs, buffer);
 		safe_unpack64(&object_ptr->idle_secs, buffer);
 		safe_unpack64(&object_ptr->over_secs, buffer);
@@ -611,7 +611,7 @@ unpack_error:
 extern void slurmdb_pack_cluster_rec(void *in, uint16_t rpc_version, Buf buffer)
 {
 	slurmdb_cluster_accounting_rec_t *slurmdb_info = NULL;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 	ListIterator itr = NULL;
 	uint32_t count = NO_VAL;
 	slurmdb_cluster_rec_t *object = (slurmdb_cluster_rec_t *)in;
@@ -653,18 +653,18 @@ extern void slurmdb_pack_cluster_rec(void *in, uint16_t rpc_version, Buf buffer)
 			list_iterator_destroy(itr);
 		}
 
-		if (object->assets)
-			count = list_count(object->assets);
+		if (object->tres)
+			count = list_count(object->tres);
 		else
 			count = NO_VAL;
 
 		pack32(count, buffer);
 
 		if (count && count != NO_VAL) {
-			itr = list_iterator_create(object->assets);
-			while ((asset_rec = list_next(itr))) {
-				slurmdb_pack_asset_rec(
-					asset_rec, rpc_version, buffer);
+			itr = list_iterator_create(object->tres);
+			while ((tres_rec = list_next(itr))) {
+				slurmdb_pack_tres_rec(
+					tres_rec, rpc_version, buffer);
 			}
 			list_iterator_destroy(itr);
 		}
@@ -724,14 +724,14 @@ extern void slurmdb_pack_cluster_rec(void *in, uint16_t rpc_version, Buf buffer)
 		pack16(object->classification, buffer);
 		packstr(object->control_host, buffer);
 		pack32(object->control_port, buffer);
-		itr = list_iterator_create(object->assets);
-		while ((asset_rec = list_next(itr))) {
-			if (asset_rec->id == 1)
+		itr = list_iterator_create(object->tres);
+		while ((tres_rec = list_next(itr))) {
+			if (tres_rec->id == 1)
 				break;
 		}
 		list_iterator_destroy(itr);
-		if (asset_rec)
-			count = (uint32_t)asset_rec->count;
+		if (tres_rec)
+			count = (uint32_t)tres_rec->count;
 		else
 			count = 0;
 		pack32(count, buffer);
@@ -759,7 +759,7 @@ extern int slurmdb_unpack_cluster_rec(void **object, uint16_t rpc_version,
 	slurmdb_cluster_rec_t *object_ptr =
 		xmalloc(sizeof(slurmdb_cluster_rec_t));
 	slurmdb_cluster_accounting_rec_t *slurmdb_info = NULL;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
 	*object = object_ptr;
 
@@ -781,14 +781,14 @@ extern int slurmdb_unpack_cluster_rec(void **object, uint16_t rpc_version,
 
 		safe_unpack32(&count, buffer);
 		if (count != NO_VAL) {
-			object_ptr->assets = list_create(
-				slurmdb_destroy_asset_rec);
+			object_ptr->tres = list_create(
+				slurmdb_destroy_tres_rec);
 			for (i=0; i<count; i++) {
-				if (slurmdb_unpack_asset_rec(
-					    (void *)&asset_rec,
+				if (slurmdb_unpack_tres_rec(
+					    (void *)&tres_rec,
 					    rpc_version, buffer) == SLURM_ERROR)
 					goto unpack_error;
-				list_append(object_ptr->assets, asset_rec);
+				list_append(object_ptr->tres, tres_rec);
 			}
 		}
 
@@ -831,11 +831,11 @@ extern int slurmdb_unpack_cluster_rec(void **object, uint16_t rpc_version,
 				       &uint32_tmp, buffer);
 		safe_unpack32(&object_ptr->control_port, buffer);
 
-		object_ptr->assets = list_create(slurmdb_destroy_asset_rec);
-		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
-		asset_rec->id = ASSET_CPU;
-		list_push(object_ptr->assets, asset_rec);
-		safe_unpack32((uint32_t *)&asset_rec->count, buffer);
+		object_ptr->tres = list_create(slurmdb_destroy_tres_rec);
+		tres_rec = xmalloc(sizeof(slurmdb_tres_rec_t));
+		tres_rec->id = TRES_CPU;
+		list_push(object_ptr->tres, tres_rec);
+		safe_unpack32((uint32_t *)&tres_rec->count, buffer);
 
 		safe_unpack16(&object_ptr->dimensions, buffer);
 		safe_unpack32(&object_ptr->flags, buffer);
@@ -870,14 +870,14 @@ extern void slurmdb_pack_accounting_rec(void *in, uint16_t rpc_version,
 	if (rpc_version >= SLURM_15_08_PROTOCOL_VERSION) {
 		if (!object) {
 			pack64(0, buffer);
-			slurmdb_pack_asset_rec(NULL, rpc_version, buffer);
+			slurmdb_pack_tres_rec(NULL, rpc_version, buffer);
 			pack32(0, buffer);
 			pack_time(0, buffer);
 			return;
 		}
 
 		pack64(object->alloc_secs, buffer);
-		slurmdb_pack_asset_rec(&object->asset_rec, rpc_version, buffer);
+		slurmdb_pack_tres_rec(&object->tres_rec, rpc_version, buffer);
 		pack32(object->id, buffer);
 		pack_time(object->period_start, buffer);
 	} else if (rpc_version >= SLURM_14_03_PROTOCOL_VERSION) {
@@ -907,8 +907,8 @@ extern int slurmdb_unpack_accounting_rec(void **object, uint16_t rpc_version,
 
 	if (rpc_version >= SLURM_15_08_PROTOCOL_VERSION) {
 		safe_unpack64(&object_ptr->alloc_secs, buffer);
-		if (slurmdb_unpack_asset_rec_noalloc(
-			    &object_ptr->asset_rec, rpc_version, buffer)
+		if (slurmdb_unpack_tres_rec_noalloc(
+			    &object_ptr->tres_rec, rpc_version, buffer)
 		    != SLURM_SUCCESS)
 			goto unpack_error;
 		safe_unpack32(&object_ptr->id, buffer);
@@ -916,8 +916,8 @@ extern int slurmdb_unpack_accounting_rec(void **object, uint16_t rpc_version,
 	} else if (rpc_version >= SLURM_14_03_PROTOCOL_VERSION) {
 		uint64_t tmp_64;
 
-		object_ptr->asset_rec.id = ASSET_CPU;
-		object_ptr->asset_rec.name = xstrdup("cpu");
+		object_ptr->tres_rec.id = TRES_CPU;
+		object_ptr->tres_rec.name = xstrdup("cpu");
 		safe_unpack64(&object_ptr->alloc_secs, buffer);
 		/* consumed_energy has to be thrown away here, this
 		 * unpack shouldn't ever happen in practice.
@@ -1153,7 +1153,7 @@ unpack_error:
 
 extern void slurmdb_pack_event_rec(void *in, uint16_t rpc_version, Buf buffer)
 {
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 	ListIterator itr = NULL;
 	uint32_t count = NO_VAL;
 	slurmdb_event_rec_t *object = (slurmdb_event_rec_t *)in;
@@ -1173,16 +1173,16 @@ extern void slurmdb_pack_event_rec(void *in, uint16_t rpc_version, Buf buffer)
 			return;
 		}
 
-		if (object->assets)
-			count = list_count(object->assets);
+		if (object->tres)
+			count = list_count(object->tres);
 
 		pack32(count, buffer);
 
 		if (count && count != NO_VAL) {
-			itr = list_iterator_create(object->assets);
-			while ((asset_rec = list_next(itr))) {
-				slurmdb_pack_asset_rec(
-					asset_rec, rpc_version, buffer);
+			itr = list_iterator_create(object->tres);
+			while ((tres_rec = list_next(itr))) {
+				slurmdb_pack_tres_rec(
+					tres_rec, rpc_version, buffer);
 			}
 			list_iterator_destroy(itr);
 		}
@@ -1213,14 +1213,14 @@ extern void slurmdb_pack_event_rec(void *in, uint16_t rpc_version, Buf buffer)
 
 		packstr(object->cluster, buffer);
 		packstr(object->cluster_nodes, buffer);
-		itr = list_iterator_create(object->assets);
-		while ((asset_rec = list_next(itr))) {
-			if (asset_rec->id == 1)
+		itr = list_iterator_create(object->tres);
+		while ((tres_rec = list_next(itr))) {
+			if (tres_rec->id == 1)
 				break;
 		}
 		list_iterator_destroy(itr);
-		if (asset_rec)
-			count = (uint32_t)asset_rec->count;
+		if (tres_rec)
+			count = (uint32_t)tres_rec->count;
 		else
 			count = 0;
 		pack32(count, buffer);
@@ -1240,7 +1240,7 @@ extern int slurmdb_unpack_event_rec(void **object, uint16_t rpc_version,
 	uint32_t uint32_tmp;
 	int i;
 	uint32_t count;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 	slurmdb_event_rec_t *object_ptr = xmalloc(sizeof(slurmdb_event_rec_t));
 
 	*object = object_ptr;
@@ -1248,14 +1248,14 @@ extern int slurmdb_unpack_event_rec(void **object, uint16_t rpc_version,
 	if (rpc_version >= SLURM_15_08_PROTOCOL_VERSION) {
 		safe_unpack32(&count, buffer);
 		if (count != NO_VAL) {
-			object_ptr->assets = list_create(
-				slurmdb_destroy_asset_rec);
+			object_ptr->tres = list_create(
+				slurmdb_destroy_tres_rec);
 			for (i=0; i<count; i++) {
-				if (slurmdb_unpack_asset_rec(
-					    (void *)&asset_rec,
+				if (slurmdb_unpack_tres_rec(
+					    (void *)&tres_rec,
 					    rpc_version, buffer) == SLURM_ERROR)
 					goto unpack_error;
-				list_append(object_ptr->assets, asset_rec);
+				list_append(object_ptr->tres, tres_rec);
 			}
 		}
 		safe_unpackstr_xmalloc(&object_ptr->cluster,
@@ -1276,11 +1276,11 @@ extern int slurmdb_unpack_event_rec(void **object, uint16_t rpc_version,
 				       &uint32_tmp, buffer);
 		safe_unpackstr_xmalloc(&object_ptr->cluster_nodes,
 				       &uint32_tmp, buffer);
-		object_ptr->assets = list_create(slurmdb_destroy_asset_rec);
-		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
-		asset_rec->id = ASSET_CPU;
-		list_push(object_ptr->assets, asset_rec);
-		safe_unpack32((uint32_t *)&asset_rec->count, buffer);
+		object_ptr->tres = list_create(slurmdb_destroy_tres_rec);
+		tres_rec = xmalloc(sizeof(slurmdb_tres_rec_t));
+		tres_rec->id = TRES_CPU;
+		list_push(object_ptr->tres, tres_rec);
+		safe_unpack32((uint32_t *)&tres_rec->count, buffer);
 		safe_unpack16(&object_ptr->event_type, buffer);
 		safe_unpackstr_xmalloc(&object_ptr->node_name,
 				       &uint32_tmp, buffer);
@@ -1984,9 +1984,9 @@ unpack_error:
 
 }
 
-extern void slurmdb_pack_asset_cond(void *in, uint16_t rpc_version, Buf buffer)
+extern void slurmdb_pack_tres_cond(void *in, uint16_t rpc_version, Buf buffer)
 {
-	slurmdb_asset_cond_t *object = (slurmdb_asset_cond_t *)in;
+	slurmdb_tres_cond_t *object = (slurmdb_tres_cond_t *)in;
 	ListIterator itr = NULL;
 	uint32_t count = NO_VAL;
 	char *tmp_info = NULL;
@@ -2044,15 +2044,15 @@ extern void slurmdb_pack_asset_cond(void *in, uint16_t rpc_version, Buf buffer)
 	count = NO_VAL;
 }
 
-extern int slurmdb_unpack_asset_cond(void **object, uint16_t rpc_version,
+extern int slurmdb_unpack_tres_cond(void **object, uint16_t rpc_version,
 				    Buf buffer)
 {
 	uint32_t uint32_tmp;
 	int i;
 	uint32_t count;
 	char *tmp_info = NULL;
-	slurmdb_asset_cond_t *object_ptr =
-		xmalloc(sizeof(slurmdb_asset_cond_t));
+	slurmdb_tres_cond_t *object_ptr =
+		xmalloc(sizeof(slurmdb_tres_cond_t));
 
 	*object = object_ptr;
 
@@ -2099,15 +2099,15 @@ extern int slurmdb_unpack_asset_cond(void **object, uint16_t rpc_version,
 	return SLURM_SUCCESS;
 
 unpack_error:
-	slurmdb_destroy_asset_cond(object_ptr);
+	slurmdb_destroy_tres_cond(object_ptr);
 	*object = NULL;
 
 	return SLURM_ERROR;
 }
 
-extern void slurmdb_pack_asset_rec(void *in, uint16_t rpc_version, Buf buffer)
+extern void slurmdb_pack_tres_rec(void *in, uint16_t rpc_version, Buf buffer)
 {
-	slurmdb_asset_rec_t *object = (slurmdb_asset_rec_t *)in;
+	slurmdb_tres_rec_t *object = (slurmdb_tres_rec_t *)in;
 
 	if (!object) {
 		pack64(0, buffer);
@@ -2123,8 +2123,8 @@ extern void slurmdb_pack_asset_rec(void *in, uint16_t rpc_version, Buf buffer)
 	packstr(object->type, buffer);
 }
 
-extern int slurmdb_unpack_asset_rec_noalloc(
-	slurmdb_asset_rec_t *object_ptr, uint16_t rpc_version, Buf buffer)
+extern int slurmdb_unpack_tres_rec_noalloc(
+	slurmdb_tres_rec_t *object_ptr, uint16_t rpc_version, Buf buffer)
 {
 	uint32_t uint32_tmp;
 
@@ -2140,19 +2140,19 @@ unpack_error:
 
 }
 
-extern int slurmdb_unpack_asset_rec(void **object, uint16_t rpc_version,
+extern int slurmdb_unpack_tres_rec(void **object, uint16_t rpc_version,
 				    Buf buffer)
 {
 	int rc;
-	slurmdb_asset_rec_t *object_ptr =
-		xmalloc(sizeof(slurmdb_asset_rec_t));
+	slurmdb_tres_rec_t *object_ptr =
+		xmalloc(sizeof(slurmdb_tres_rec_t));
 
 	*object = object_ptr;
 
-	rc = slurmdb_unpack_asset_rec_noalloc(object_ptr, rpc_version, buffer);
+	rc = slurmdb_unpack_tres_rec_noalloc(object_ptr, rpc_version, buffer);
 
 	if (rc != SLURM_SUCCESS) {
-		slurmdb_destroy_asset_rec(object_ptr);
+		slurmdb_destroy_tres_rec(object_ptr);
 		*object = NULL;
 	}
 
@@ -3853,7 +3853,7 @@ extern void slurmdb_pack_job_rec(void *object, uint16_t rpc_version, Buf buffer)
 	ListIterator itr = NULL;
 	slurmdb_step_rec_t *step = NULL;
 	uint32_t count = 0;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
 	if (rpc_version >= SLURM_15_08_PROTOCOL_VERSION) {
 		packstr(job->account, buffer);
@@ -3865,18 +3865,18 @@ extern void slurmdb_pack_job_rec(void *object, uint16_t rpc_version, Buf buffer)
 		pack32(job->array_task_id, buffer);
 		packstr(job->array_task_str, buffer);
 
-		if (job->assets)
-			count = list_count(job->assets);
+		if (job->tres)
+			count = list_count(job->tres);
 		else
 			count = NO_VAL;
 
 		pack32(count, buffer);
 
 		if (count && count != NO_VAL) {
-			itr = list_iterator_create(job->assets);
-			while ((asset_rec = list_next(itr))) {
-				slurmdb_pack_asset_rec(
-					asset_rec, rpc_version, buffer);
+			itr = list_iterator_create(job->tres);
+			while ((tres_rec = list_next(itr))) {
+				slurmdb_pack_tres_rec(
+					tres_rec, rpc_version, buffer);
 			}
 			list_iterator_destroy(itr);
 		}
@@ -4072,7 +4072,7 @@ extern int slurmdb_unpack_job_rec(void **job, uint16_t rpc_version, Buf buffer)
 	uint32_t count = 0;
 	uint32_t uint32_tmp;
 	uint16_t uint16_tmp;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
 	*job = job_ptr;
 
@@ -4093,14 +4093,14 @@ extern int slurmdb_unpack_job_rec(void **job, uint16_t rpc_version, Buf buffer)
 
 		safe_unpack32(&count, buffer);
 		if (count != NO_VAL) {
-			job_ptr->assets = list_create(
-				slurmdb_destroy_asset_rec);
+			job_ptr->tres = list_create(
+				slurmdb_destroy_tres_rec);
 			for (i=0; i<count; i++) {
-				if (slurmdb_unpack_asset_rec(
-					    (void *)&asset_rec,
+				if (slurmdb_unpack_tres_rec(
+					    (void *)&tres_rec,
 					    rpc_version, buffer) == SLURM_ERROR)
 					goto unpack_error;
-				list_append(job_ptr->assets, asset_rec);
+				list_append(job_ptr->tres, tres_rec);
 			}
 		}
 
@@ -5515,8 +5515,8 @@ extern void slurmdb_pack_update_object(slurmdb_update_object_t *object,
 	case SLURMDB_REMOVE_RES:
 		my_function = slurmdb_pack_res_rec;
 		break;
-	case SLURMDB_ADD_ASSET:
-		my_function = slurmdb_pack_asset_rec;
+	case SLURMDB_ADD_TRES:
+		my_function = slurmdb_pack_tres_rec;
 		break;
 	case SLURMDB_UPDATE_NOTSET:
 	default:
@@ -5592,9 +5592,9 @@ extern int slurmdb_unpack_update_object(slurmdb_update_object_t **object,
 		my_function = slurmdb_unpack_res_rec;
 		my_destroy = slurmdb_destroy_res_rec;
 		break;
-	case SLURMDB_ADD_ASSET:
-		my_function = slurmdb_unpack_asset_rec;
-		my_destroy = slurmdb_destroy_asset_rec;
+	case SLURMDB_ADD_TRES:
+		my_function = slurmdb_unpack_tres_rec;
+		my_destroy = slurmdb_destroy_tres_rec;
 		break;
 	case SLURMDB_UPDATE_NOTSET:
 	default:

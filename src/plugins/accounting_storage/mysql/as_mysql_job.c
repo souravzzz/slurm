@@ -635,34 +635,34 @@ no_rollup_change:
 		rc = mysql_db_query(mysql_conn, query);
 	}
 
-	if (job_ptr->db_index && job_ptr->assets) {
+	if (job_ptr->db_index && job_ptr->tres) {
 		ListIterator itr;
-		slurmdb_asset_rec_t *asset_rec;
+		slurmdb_tres_rec_t *tres_rec;
 
 		xfree(query);
 
-		itr = list_iterator_create(job_ptr->assets);
-		while ((asset_rec = list_next(itr))) {
-			if (!asset_rec->id)
+		itr = list_iterator_create(job_ptr->tres);
+		while ((tres_rec = list_next(itr))) {
+			if (!tres_rec->id)
 				continue;
 			if (!query)
 				xstrfmtcat(query,
 					   "insert into \"%s_%s\" "
-					   "(job_db_inx, id_asset, count) "
+					   "(job_db_inx, id_tres, count) "
 					   "values (%u, %u, %"PRIu64")",
 					   mysql_conn->cluster_name,
 					   job_ext_table,
 					   job_ptr->db_index,
-					   asset_rec->id, asset_rec->count);
+					   tres_rec->id, tres_rec->count);
 			else
 				xstrfmtcat(query,
 					   ", (%u, %u, %"PRIu64")",
 					   job_ptr->db_index,
-					   asset_rec->id, asset_rec->count);
-			debug("inserting %s(%s) with asset %u "
+					   tres_rec->id, tres_rec->count);
+			debug("inserting %s(%s) with tres %u "
 			      "count of %"PRIu64"",
 			      job_ptr->name, mysql_conn->cluster_name,
-			      asset_rec->id, asset_rec->count);
+			      tres_rec->id, tres_rec->count);
 		}
 		list_iterator_destroy(itr);
 		if (query) {

@@ -53,10 +53,10 @@
 	(_X != NO_VAL && _X & SLURMDB_PURGE_MONTHS)
 
 typedef enum {
-	ASSET_CPU = 1,
-	ASSET_MEM,
-	ASSET_ENERGY,
-} asset_types_t;
+	TRES_CPU = 1,
+	TRES_MEM,
+	TRES_ENERGY,
+} tres_types_t;
 
 typedef struct {
 	slurmdb_cluster_rec_t *cluster_rec;
@@ -124,22 +124,22 @@ extern char *slurmdb_get_selected_step_id(
 	char *job_id_str, int len,
 	slurmdb_selected_step_t *selected_step);
 
-extern slurmdb_asset_rec_t *slurmdb_copy_asset_rec(slurmdb_asset_rec_t *asset);
-extern char *slurmdb_make_asset_string(List assets);
-extern int slurmdb_find_asset_in_list(void *x, void *key);
-extern int slurmdb_find_cluster_accting_asset_in_list(void *x, void *key);
-extern int slurmdb_add_cluster_accounting_to_asset_list(
+extern slurmdb_tres_rec_t *slurmdb_copy_tres_rec(slurmdb_tres_rec_t *tres);
+extern char *slurmdb_make_tres_string(List tres);
+extern int slurmdb_find_tres_in_list(void *x, void *key);
+extern int slurmdb_find_cluster_accting_tres_in_list(void *x, void *key);
+extern int slurmdb_add_cluster_accounting_to_tres_list(
 	slurmdb_cluster_accounting_rec_t *accting,
-	List *assets);
-extern int slurmdb_add_accounting_to_asset_list(
+	List *tres);
+extern int slurmdb_add_accounting_to_tres_list(
 	slurmdb_accounting_rec_t *accting,
-	List *assets);
-extern int slurmdb_add_time_from_count_to_asset_list(
-	slurmdb_asset_rec_t *asset_in, List *assets, time_t elapsed);
+	List *tres);
+extern int slurmdb_add_time_from_count_to_tres_list(
+	slurmdb_tres_rec_t *tres_in, List *tres, time_t elapsed);
 extern int slurmdb_sum_accounting_list(
 	slurmdb_cluster_accounting_rec_t *accting,
-	List *total_asset_acct);
-extern void slurmdb_transfer_acct_list_2_asset(
-	List accounting_list, List *assets);
+	List *total_tres_acct);
+extern void slurmdb_transfer_acct_list_2_tres(
+	List accounting_list, List *tres);
 
 #endif

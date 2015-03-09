@@ -50,7 +50,7 @@
 #define SLURMDBD_2_5_VERSION   11	/* slurm version 2.5 */
 
 typedef struct {
-	List assets;
+	List tres;
 	char *cluster_nodes;
 	char *inx;
 	char *node_name;
@@ -425,22 +425,22 @@ static int high_buffer_size = (1024 * 1024);
 static void _pack_local_event(local_event_t *object,
 			      uint16_t rpc_version, Buf buffer)
 {
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 	ListIterator itr = NULL;
 	uint32_t count = NO_VAL;
 
-	if (object->assets)
-		count = list_count(object->assets);
+	if (object->tres)
+		count = list_count(object->tres);
 	else
 		count = NO_VAL;
 
 	pack32(count, buffer);
 
 	if (count && count != NO_VAL) {
-		itr = list_iterator_create(object->assets);
-		while ((asset_rec = list_next(itr))) {
-			slurmdb_pack_asset_rec(
-				asset_rec, rpc_version, buffer);
+		itr = list_iterator_create(object->tres);
+		while ((tres_rec = list_next(itr))) {
+			slurmdb_pack_tres_rec(
+				tres_rec, rpc_version, buffer);
 		}
 		list_iterator_destroy(itr);
 	}
@@ -464,18 +464,18 @@ static int _unpack_local_event(local_event_t *object,
 	uint32_t count;
 	char *tmp_char;
 	int i;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
 	if (rpc_version >= SLURM_15_08_PROTOCOL_VERSION) {
 		safe_unpack32(&count, buffer);
 		if (count != NO_VAL) {
-			object->assets = list_create(slurmdb_destroy_asset_rec);
+			object->tres = list_create(slurmdb_destroy_tres_rec);
 			for (i=0; i<count; i++) {
-				if (slurmdb_unpack_asset_rec(
-					    (void *)&asset_rec,
+				if (slurmdb_unpack_tres_rec(
+					    (void *)&tres_rec,
 					    rpc_version, buffer) == SLURM_ERROR)
 					goto unpack_error;
-				list_append(object->assets, asset_rec);
+				list_append(object->tres, tres_rec);
 			}
 		}
 		unpackstr_ptr(&object->cluster_nodes, &tmp32, buffer);
@@ -488,12 +488,12 @@ static int _unpack_local_event(local_event_t *object,
 		unpackstr_ptr(&object->state, &tmp32, buffer);
 	} else {
 		unpackstr_ptr(&object->cluster_nodes, &tmp32, buffer);
-		object->assets = list_create(slurmdb_destroy_asset_rec);
-		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
-		asset_rec->id = ASSET_CPU;
-		list_append(object->assets, asset_rec);
+		object->tres = list_create(slurmdb_destroy_tres_rec);
+		tres_rec = xmalloc(sizeof(slurmdb_tres_rec_t));
+		tres_rec->id = TRES_CPU;
+		list_append(object->tres, tres_rec);
 		unpackstr_ptr(&tmp_char, &tmp32, buffer);
-		asset_rec->count = slurm_atoull(tmp_char);
+		tres_rec->count = slurm_atoull(tmp_char);
 		xfree(tmp_char);
 		unpackstr_ptr(&object->node_name, &tmp32, buffer);
 		unpackstr_ptr(&object->period_end, &tmp32, buffer);
@@ -1469,7 +1469,7 @@ static uint32_t _archive_events(mysql_conn_t *mysql_conn, char *cluster_name,
 		xstrfmtcat(tmp, ", %s", event_req_inx[i]);
 	}
 	assoc_mgr_lock(&locks);
-	xstrcat(tmp, full_asset_query);
+	xstrcat(tmp, full_tres_query);
 
 	/* get all the events started before this time listed */
 	query = xstrdup_printf("select %s from \"%s_%s\" where "
@@ -1501,9 +1501,9 @@ static uint32_t _archive_events(mysql_conn_t *mysql_conn, char *cluster_name,
 	packstr(cluster_name, buffer);
 	pack32(cnt, buffer);
 
-	itr = list_iterator_create(assoc_mgr_asset_list);
+	itr = list_iterator_create(assoc_mgr_tres_list);
 	while ((row = mysql_fetch_row(result))) {
-		slurmdb_asset_rec_t *asset_rec, *loc_asset_rec;
+		slurmdb_tres_rec_t *tres_rec, *loc_tres_rec;
 		if (!period_start)
 			period_start = slurm_atoul(row[EVENT_REQ_START]);
 
@@ -1517,25 +1517,25 @@ static uint32_t _archive_events(mysql_conn_t *mysql_conn, char *cluster_name,
 		event.reason = row[EVENT_REQ_REASON];
 		event.reason_uid = row[EVENT_REQ_REASON_UID];
 		event.state = row[EVENT_REQ_STATE];
-		event.assets = list_create(slurmdb_destroy_asset_rec);
+		event.tres = list_create(slurmdb_destroy_tres_rec);
 
 		i = EVENT_REQ_COUNT-1;
 		list_iterator_reset(itr);
-		while ((asset_rec = list_next(itr))) {
+		while ((tres_rec = list_next(itr))) {
 			i++;
-			/* Skip if the asset is NULL,
+			/* Skip if the tres is NULL,
 			 * it means this cluster
 			 * doesn't care about it.
 			 */
 			if (!row[i] || !row[i][0])
 				continue;
-			loc_asset_rec = slurmdb_copy_asset_rec(asset_rec);
-			loc_asset_rec->count = slurm_atoull(row[i]);
-			list_append(event.assets, loc_asset_rec);
+			loc_tres_rec = slurmdb_copy_tres_rec(tres_rec);
+			loc_tres_rec->count = slurm_atoull(row[i]);
+			list_append(event.tres, loc_tres_rec);
 		}
 
 		_pack_local_event(&event, SLURM_PROTOCOL_VERSION, buffer);
-		FREE_NULL_LIST(event.assets);
+		FREE_NULL_LIST(event.tres);
 	}
 	list_iterator_destroy(itr);
 	assoc_mgr_unlock(&locks);
@@ -1560,11 +1560,11 @@ static char *
 _load_events(uint16_t rpc_version, Buf buffer, char *cluster_name,
 	     uint32_t rec_cnt)
 {
-	char *insert = NULL, *cols = NULL, *format = NULL, *asset_values = NULL;
+	char *insert = NULL, *cols = NULL, *format = NULL, *tres_values = NULL;
 	local_event_t object;
 	int i = 0;
 	ListIterator itr;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
 	xstrfmtcat(cols, "(%s", event_req_inx[0]);
 	xstrcat(format, "insert into \"%s_%s\" %s ('%s'");
@@ -1586,7 +1586,7 @@ _load_events(uint16_t rpc_version, Buf buffer, char *cluster_name,
 			break;
 		}
 
-		xassert(object.assets);
+		xassert(object.tres);
 
 		xstrfmtcat(insert, format,
 			   cluster_name, event_table, cols,
@@ -1603,27 +1603,27 @@ _load_events(uint16_t rpc_version, Buf buffer, char *cluster_name,
 		else
 			inx = "LAST_INSERT_ID()";
 
-		itr = list_iterator_create(object.assets);
-		while ((asset_rec = list_next(itr))) {
-			if (asset_values) {
-				xstrfmtcat(asset_values,
+		itr = list_iterator_create(object.tres);
+		while ((tres_rec = list_next(itr))) {
+			if (tres_values) {
+				xstrfmtcat(tres_values,
 					   ", (%s, %u, %"PRIu64")",
-					   inx, asset_rec->id,
-					   asset_rec->count);
+					   inx, tres_rec->id,
+					   tres_rec->count);
 			} else {
-				xstrfmtcat(asset_values,
+				xstrfmtcat(tres_values,
 					   "insert into \"%s_%s\" "
-					   "(inx, id_asset, count) values "
+					   "(inx, id_tres, count) values "
 					   "(%s, %u, %"PRIu64")",
 					   cluster_name, event_ext_table,
-					   inx, asset_rec->id,
-					   asset_rec->count);
+					   inx, tres_rec->id,
+					   tres_rec->count);
 			}
 		}
 		list_iterator_destroy(itr);
-		if (asset_values) {
-			xstrfmtcat(insert, "%s;", asset_values);
-			xfree(asset_values);
+		if (tres_values) {
+			xstrfmtcat(insert, "%s;", tres_values);
+			xfree(tres_values);
 		}
 	}
 //	END_TIMER2("step query");

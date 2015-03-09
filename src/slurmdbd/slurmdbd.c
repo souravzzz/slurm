@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 	/* If we are tacking wckey we need to cache
 	   wckeys, if we aren't only cache the users, qos */
 	assoc_init_arg.cache_level = ASSOC_MGR_CACHE_USER |
-		ASSOC_MGR_CACHE_QOS | ASSOC_MGR_CACHE_ASSET;
+		ASSOC_MGR_CACHE_QOS | ASSOC_MGR_CACHE_TRES;
 	if (slurmdbd_conf->track_wckey)
 		assoc_init_arg.cache_level |= ASSOC_MGR_CACHE_WCKEY;
 
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
 			      slurmdbd_conf->dbd_backup);
 		}
 
-		acct_storage_g_add_assets(db_conn, getuid(), NULL);
+		acct_storage_g_add_tres(db_conn, getuid(), NULL);
 
 		if (!shutdown_time) {
 			/* Create attached thread to process incoming RPCs */

@@ -376,7 +376,7 @@ static int _cluster_get_jobs(mysql_conn_t *mysql_conn,
 	int rc = SLURM_SUCCESS;
 	int last_id = -1, curr_id = -1, i;
 	local_cluster_t *curr_cluster = NULL;
-	slurmdb_asset_rec_t *asset_rec, *loc_asset_rec;
+	slurmdb_tres_rec_t *tres_rec, *loc_tres_rec;
 
 	/* This is here to make sure we are looking at only this user
 	 * if this flag is set.  We also include any accounts they may be
@@ -492,7 +492,7 @@ static int _cluster_get_jobs(mysql_conn_t *mysql_conn,
 		}
 	}
 
-	itr2 = list_iterator_create(assoc_mgr_asset_list);
+	itr2 = list_iterator_create(assoc_mgr_tres_list);
 	while ((row = mysql_fetch_row(result))) {
 		char *id = row[JOB_REQ_ID];
 		bool job_ended = 0;
@@ -740,21 +740,21 @@ static int _cluster_get_jobs(mysql_conn_t *mysql_conn,
 				xstrcat(extra, ")");
 		}
 
-		job->assets = list_create(slurmdb_destroy_asset_rec);
+		job->tres = list_create(slurmdb_destroy_tres_rec);
 		i = JOB_REQ_COUNT-1;
 		list_iterator_reset(itr2);
-		while ((asset_rec = list_next(itr2))) {
+		while ((tres_rec = list_next(itr2))) {
 			i++;
-			/* Skip if the asset is NULL,
+			/* Skip if the tres is NULL,
 			 * it means this job doesn't care about it.
 			 */
 			if (!row[i] || !row[i][0])
 				continue;
-			loc_asset_rec = slurmdb_copy_asset_rec(asset_rec);
-			loc_asset_rec->count = slurm_atoull(row[i]);
-			list_append(job->assets, loc_asset_rec);
-			if (loc_asset_rec->id == ASSET_CPU)
-				job->alloc_cpus = loc_asset_rec->count;
+			loc_tres_rec = slurmdb_copy_tres_rec(tres_rec);
+			loc_tres_rec->count = slurm_atoull(row[i]);
+			list_append(job->tres, loc_tres_rec);
+			if (loc_tres_rec->id == TRES_CPU)
+				job->alloc_cpus = loc_tres_rec->count;
 		}
 
 		query =	xstrdup_printf("select %s from \"%s_%s\" as t1 "
@@ -1621,7 +1621,7 @@ extern List as_mysql_jobacct_process_get_jobs(mysql_conn_t *mysql_conn,
 		slurm_mutex_lock(&as_mysql_cluster_list_lock);
 
 	assoc_mgr_lock(&locks);
-	xstrcat(tmp, full_asset_query);
+	xstrcat(tmp, full_tres_query);
 
 	job_list = list_create(slurmdb_destroy_job_rec);
 	itr = list_iterator_create(use_cluster_list);

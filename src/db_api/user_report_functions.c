@@ -251,9 +251,9 @@ extern List slurmdb_report_user_top_usage(void *db_conn,
 			if (!object)
 				list_append(slurmdb_report_user->acct_list,
 					    xstrdup(assoc->acct));
-			slurmdb_transfer_acct_list_2_asset(
+			slurmdb_transfer_acct_list_2_tres(
 				assoc->accounting_list,
-				&slurmdb_report_user->assets);
+				&slurmdb_report_user->tres);
 		}
 		list_iterator_destroy(itr2);
 	}

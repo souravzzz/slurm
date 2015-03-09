@@ -259,7 +259,7 @@ static void * _service_connection(void *arg)
 			cluster_rec.name = conn->cluster_name;
 			cluster_rec.control_host = conn->ip;
 			cluster_rec.control_port = conn->ctld_port;
-			cluster_rec.assets = conn->assets;
+			cluster_rec.tres = conn->tres;
 			debug("cluster %s has disconnected",
 			      conn->cluster_name);
 
@@ -287,7 +287,7 @@ static void * _service_connection(void *arg)
 	else
 		debug2("Closed connection %d uid(%d)", conn->newsockfd, uid);
 
-	FREE_NULL_LIST(conn->assets);
+	FREE_NULL_LIST(conn->tres);
 	xfree(conn->cluster_name);
 	xfree(conn);
 	_free_server_thread(pthread_self());

@@ -4877,7 +4877,7 @@ _unpack_job_info_members(job_info_t * job, Buf buffer,
 	char *node_inx_str;
 	multi_core_data_t *mc_ptr;
 	uint32_t count = NO_VAL;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 	int i;
 
 	job->ntasks_per_node = (uint16_t)NO_VAL;
@@ -4895,15 +4895,15 @@ _unpack_job_info_members(job_info_t * job, Buf buffer,
 
 		safe_unpack32(&count, buffer);
 		if (count != NO_VAL) {
-			job->assets = list_create(slurmdb_destroy_asset_rec);
+			job->tres = list_create(slurmdb_destroy_tres_rec);
 			for (i=0; i<count; i++) {
-				if (slurmdb_unpack_asset_rec(
-					    (void **)&asset_rec,
+				if (slurmdb_unpack_tres_rec(
+					    (void **)&tres_rec,
 					    protocol_version,
 					    buffer)
 				    != SLURM_SUCCESS)
 					goto unpack_error;
-				list_append(job->assets, asset_rec);
+				list_append(job->tres, tres_rec);
 			}
 		}
 		safe_unpack32(&job->assoc_id, buffer);

@@ -44,7 +44,7 @@
 #include "src/common/slurm_protocol_defs.h"
 
 typedef struct {
-	List assets;
+	List tres;
 	char *cluster_name;
 	uint16_t ctld_port; /* slurmctld_port */
 	void *db_conn; /* database connection */

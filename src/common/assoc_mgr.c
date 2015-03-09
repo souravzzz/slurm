@@ -56,7 +56,7 @@ slurmdb_assoc_rec_t *assoc_mgr_root_assoc = NULL;
 uint32_t g_qos_max_priority = 0;
 uint32_t g_qos_count = 0;
 uint32_t g_user_assoc_count = 0;
-List assoc_mgr_asset_list = NULL;
+List assoc_mgr_tres_list = NULL;
 List assoc_mgr_assoc_list = NULL;
 List assoc_mgr_res_list = NULL;
 List assoc_mgr_qos_list = NULL;
@@ -1035,24 +1035,24 @@ static int _post_res_list(List res_list)
 	return SLURM_SUCCESS;
 }
 
-static int _get_assoc_mgr_asset_list(void *db_conn, int enforce)
+static int _get_assoc_mgr_tres_list(void *db_conn, int enforce)
 {
-	slurmdb_asset_cond_t asset_q;
+	slurmdb_tres_cond_t tres_q;
 	uid_t uid = getuid();
 	assoc_mgr_lock_t locks = { WRITE_LOCK, NO_LOCK, NO_LOCK,
 				   NO_LOCK, NO_LOCK, NO_LOCK, NO_LOCK };
 
-	memset(&asset_q, 0, sizeof(slurmdb_asset_cond_t));
+	memset(&tres_q, 0, sizeof(slurmdb_tres_cond_t));
 
 	assoc_mgr_lock(&locks);
-	FREE_NULL_LIST(assoc_mgr_asset_list);
-	assoc_mgr_asset_list = acct_storage_g_get_assets(
-		db_conn, uid, &asset_q);
+	FREE_NULL_LIST(assoc_mgr_tres_list);
+	assoc_mgr_tres_list = acct_storage_g_get_tres(
+		db_conn, uid, &tres_q);
 
-	if (!assoc_mgr_asset_list) {
+	if (!assoc_mgr_tres_list) {
 		assoc_mgr_unlock(&locks);
 		if (enforce & ACCOUNTING_ENFORCE_ASSOCS) {
-			error("_get_assoc_mgr_asset_list: "
+			error("_get_assoc_mgr_tres_list: "
 			      "no list was made.");
 			return SLURM_ERROR;
 		} else {
@@ -1282,30 +1282,30 @@ static int _get_assoc_mgr_wckey_list(void *db_conn, int enforce)
 /* This only gets a new list if available dropping the old one if
  * needed
  */
-static int _refresh_assoc_mgr_asset_list(void *db_conn, int enforce)
+static int _refresh_assoc_mgr_tres_list(void *db_conn, int enforce)
 {
-	List current_assets = NULL;
-	slurmdb_asset_cond_t asset_q;
+	List current_tres = NULL;
+	slurmdb_tres_cond_t tres_q;
 	uid_t uid = getuid();
 	assoc_mgr_lock_t locks = { WRITE_LOCK, NO_LOCK, NO_LOCK,
 				   NO_LOCK, NO_LOCK, NO_LOCK, NO_LOCK };
 
-	slurmdb_init_asset_cond(&asset_q, 0);
+	slurmdb_init_tres_cond(&tres_q, 0);
 
-	current_assets = acct_storage_g_get_assets(db_conn, uid, &asset_q);
+	current_tres = acct_storage_g_get_tres(db_conn, uid, &tres_q);
 
-	if (!current_assets) {
-		error("_refresh_assoc_mgr_asset_list: "
+	if (!current_tres) {
+		error("_refresh_assoc_mgr_tres_list: "
 		      "no new list given back keeping cached one.");
 		return SLURM_ERROR;
 	}
 
 	assoc_mgr_lock(&locks);
 
-	if (assoc_mgr_asset_list)
-		list_destroy(assoc_mgr_asset_list);
+	if (assoc_mgr_tres_list)
+		list_destroy(assoc_mgr_tres_list);
 
-	assoc_mgr_asset_list = current_assets;
+	assoc_mgr_tres_list = current_tres;
 
 	assoc_mgr_unlock(&locks);
 
@@ -1694,9 +1694,9 @@ extern int assoc_mgr_init(void *db_conn, assoc_init_args_t *args,
 		    SLURM_ERROR)
 			return SLURM_ERROR;
 
-	if ((!assoc_mgr_asset_list)
-	    && (init_setup.cache_level & ASSOC_MGR_CACHE_ASSET))
-		if (_get_assoc_mgr_asset_list(db_conn, init_setup.enforce)
+	if ((!assoc_mgr_tres_list)
+	    && (init_setup.cache_level & ASSOC_MGR_CACHE_TRES))
+		if (_get_assoc_mgr_tres_list(db_conn, init_setup.enforce)
 		    == SLURM_ERROR)
 			return SLURM_ERROR;
 
@@ -1715,7 +1715,7 @@ extern int assoc_mgr_fini(char *state_save_location)
 	assoc_mgr_lock(&locks);
 
 	FREE_NULL_LIST(assoc_mgr_assoc_list);
-	FREE_NULL_LIST(assoc_mgr_asset_list);
+	FREE_NULL_LIST(assoc_mgr_tres_list);
 	FREE_NULL_LIST(assoc_mgr_res_list);
 	FREE_NULL_LIST(assoc_mgr_qos_list);
 	FREE_NULL_LIST(assoc_mgr_user_list);
@@ -1740,10 +1740,10 @@ extern int assoc_mgr_fini(char *state_save_location)
 
 extern void assoc_mgr_lock(assoc_mgr_lock_t *locks)
 {
-	if (locks->asset == READ_LOCK)
-		_wr_rdlock(ASSET_LOCK);
-	else if (locks->asset == WRITE_LOCK)
-		_wr_wrlock(ASSET_LOCK);
+	if (locks->tres == READ_LOCK)
+		_wr_rdlock(TRES_LOCK);
+	else if (locks->tres == WRITE_LOCK)
+		_wr_wrlock(TRES_LOCK);
 
 	if (locks->assoc == READ_LOCK)
 		_wr_rdlock(ASSOC_LOCK);
@@ -1798,10 +1798,10 @@ extern void assoc_mgr_unlock(assoc_mgr_lock_t *locks)
 	else if (locks->assoc == WRITE_LOCK)
 		_wr_wrunlock(ASSOC_LOCK);
 
-	if (locks->asset == READ_LOCK)
-		_wr_rdunlock(ASSET_LOCK);
-	else if (locks->asset == WRITE_LOCK)
-		_wr_wrunlock(ASSET_LOCK);
+	if (locks->tres == READ_LOCK)
+		_wr_rdunlock(TRES_LOCK);
+	else if (locks->tres == WRITE_LOCK)
+		_wr_wrunlock(TRES_LOCK);
 }
 
 extern assoc_mgr_assoc_usage_t *create_assoc_mgr_assoc_usage()
@@ -1906,47 +1906,47 @@ extern int assoc_mgr_get_user_assocs(void *db_conn,
 	return SLURM_SUCCESS;
 }
 
-extern int assoc_mgr_fill_in_asset(void *db_conn,
-				   slurmdb_asset_rec_t *asset,
+extern int assoc_mgr_fill_in_tres(void *db_conn,
+				   slurmdb_tres_rec_t *tres,
 				   int enforce,
-				   slurmdb_asset_rec_t **asset_pptr,
+				   slurmdb_tres_rec_t **tres_pptr,
 				   bool locked)
 {
 	ListIterator itr;
-	slurmdb_asset_rec_t *found_asset = NULL;
+	slurmdb_tres_rec_t *found_tres = NULL;
 	assoc_mgr_lock_t locks = { READ_LOCK, NO_LOCK, NO_LOCK,
 				   NO_LOCK, NO_LOCK, NO_LOCK, NO_LOCK };
 
-	if (asset_pptr)
-		*asset_pptr = NULL;
+	if (tres_pptr)
+		*tres_pptr = NULL;
 
 	/* Since we might be locked we can't come in here and try to
 	 * get the list since we would need the WRITE_LOCK to do that,
 	 * so just return as this would only happen on a system not
 	 * talking to the database.
 	 */
-	if (!assoc_mgr_asset_list) {
+	if (!assoc_mgr_tres_list) {
 		int rc = SLURM_SUCCESS;
 
-		if (enforce & ACCOUNTING_ENFORCE_ASSETS) {
-			error("No Asset list available, "
+		if (enforce & ACCOUNTING_ENFORCE_TRES) {
+			error("No TRES list available, "
 			      "this should never happen");
 			rc = SLURM_ERROR;
 		}
 		return rc;
 	}
 
-	if ((!assoc_mgr_asset_list
-	     || !list_count(assoc_mgr_asset_list))
-	    && !(enforce & ACCOUNTING_ENFORCE_ASSETS))
+	if ((!assoc_mgr_tres_list
+	     || !list_count(assoc_mgr_tres_list))
+	    && !(enforce & ACCOUNTING_ENFORCE_TRES))
 		return SLURM_SUCCESS;
 
-	if (!asset->id) {
-		if (!asset->type ||
-		    ((!strncasecmp(asset->type, "gres:", 5) ||
-		      !strncasecmp(asset->type, "license:", 8))
-		     && !asset->name)) {
-			if (enforce & ACCOUNTING_ENFORCE_ASSETS) {
+	if (!tres->id) {
+		if (!tres->type ||
+		    ((!strncasecmp(tres->type, "gres:", 5) ||
+		      !strncasecmp(tres->type, "license:", 8))
+		     && !tres->name)) {
+			if (enforce & ACCOUNTING_ENFORCE_TRES) {
 				error("get_assoc_id: "
 				      "Not enough info to "
 				      "get an association");
@@ -1956,27 +1956,27 @@ extern int assoc_mgr_fill_in_asset(void *db_conn,
 			}
 		}
 	}
-	/* info("looking for asset of (%d)%s:%s", */
-	/*      asset->id, asset->type, asset->name); */
+	/* info("looking for tres of (%d)%s:%s", */
+	/*      tres->id, tres->type, tres->name); */
 	if (!locked)
 		assoc_mgr_lock(&locks);
 
-	itr = list_iterator_create(assoc_mgr_asset_list);
-	while ((found_asset = list_next(itr))) {
-		if (asset->id) {
-			if (asset->id == found_asset->id)
+	itr = list_iterator_create(assoc_mgr_tres_list);
+	while ((found_tres = list_next(itr))) {
+		if (tres->id) {
+			if (tres->id == found_tres->id)
 				break;
-		} else if ((asset->type
-			    && !strcasecmp(asset->type, found_asset->type))
-			   && ((!asset->name && !found_asset->name)
-			       || ((asset->name && found_asset->name) &&
-				   !strcasecmp(asset->name,
-					       found_asset->name))))
+		} else if ((tres->type
+			    && !strcasecmp(tres->type, found_tres->type))
+			   && ((!tres->name && !found_tres->name)
+			       || ((tres->name && found_tres->name) &&
+				   !strcasecmp(tres->name,
+					       found_tres->name))))
 			break;
 	}
 	list_iterator_destroy(itr);
 
-	if (!found_asset) {
+	if (!found_tres) {
 		if (!locked)
 			assoc_mgr_unlock(&locks);
 		if (enforce & ACCOUNTING_ENFORCE_ASSOCS)
@@ -1984,19 +1984,19 @@ extern int assoc_mgr_fill_in_asset(void *db_conn,
 		else
 			return SLURM_SUCCESS;
 	}
-	debug3("found correct asset");
-	if (asset_pptr)
-		*asset_pptr = found_asset;
+	debug3("found correct tres");
+	if (tres_pptr)
+		*tres_pptr = found_tres;
 
-	asset->id           = found_asset->id;
+	tres->id           = found_tres->id;
 
-	if (!asset->type)
-		asset->type = found_asset->type;
+	if (!tres->type)
+		tres->type = found_tres->type;
 
-	if (!asset->name)
-		asset->name = found_asset->name;
+	if (!tres->name)
+		tres->name = found_tres->name;
 
-	asset->count        = found_asset->count;
+	tres->count        = found_tres->count;
 
 	if (!locked)
 		assoc_mgr_unlock(&locks);
@@ -2869,8 +2869,8 @@ extern int assoc_mgr_update(List update_list)
 			   plugins for rollback purposes, just skip here.
 			*/
 			break;
-		case SLURMDB_ADD_ASSET:
-			rc = assoc_mgr_update_asset(object);
+		case SLURMDB_ADD_TRES:
+			rc = assoc_mgr_update_tres(object);
 			break;
 		case SLURMDB_UPDATE_NOTSET:
 		default:
@@ -3964,22 +3964,22 @@ extern int assoc_mgr_update_res(slurmdb_update_object_t *update)
 	return rc;
 }
 
-extern int assoc_mgr_update_asset(slurmdb_update_object_t *update)
+extern int assoc_mgr_update_tres(slurmdb_update_object_t *update)
 {
-	slurmdb_asset_rec_t *rec = NULL;
-	slurmdb_asset_rec_t *object = NULL;
+	slurmdb_tres_rec_t *rec = NULL;
+	slurmdb_tres_rec_t *object = NULL;
 
 	ListIterator itr = NULL;
 	int rc = SLURM_SUCCESS;
 	assoc_mgr_lock_t locks = { WRITE_LOCK, NO_LOCK, NO_LOCK,
 				   NO_LOCK, NO_LOCK, NO_LOCK, NO_LOCK };
 	assoc_mgr_lock(&locks);
-	if (!assoc_mgr_asset_list) {
+	if (!assoc_mgr_tres_list) {
 		assoc_mgr_unlock(&locks);
 		return SLURM_SUCCESS;
 	}
 
-	itr = list_iterator_create(assoc_mgr_asset_list);
+	itr = list_iterator_create(assoc_mgr_tres_list);
 	while ((object = list_pop(update->objects))) {
 		list_iterator_reset(itr);
 		while ((rec = list_next(itr))) {
@@ -3987,7 +3987,7 @@ extern int assoc_mgr_update_asset(slurmdb_update_object_t *update)
 				break;
 		}
 		switch(update->type) {
-		case SLURMDB_ADD_ASSET:
+		case SLURMDB_ADD_TRES:
 			if (rec) {
 				//rc = SLURM_ERROR;
 				break;
@@ -3997,14 +3997,14 @@ extern int assoc_mgr_update_asset(slurmdb_update_object_t *update)
 				      "This should never happen.");
 				break;
 			}
-			list_append(assoc_mgr_asset_list, object);
+			list_append(assoc_mgr_tres_list, object);
 			object = NULL;
 			break;
 		default:
 			break;
 		}
 
-		slurmdb_destroy_asset_rec(object);
+		slurmdb_destroy_tres_rec(object);
 	}
 	list_iterator_destroy(itr);
 	assoc_mgr_unlock(&locks);
@@ -4167,13 +4167,13 @@ extern int dump_assoc_mgr_state(char *state_save_location)
 	pack_time(time(NULL), buffer);
 
 	assoc_mgr_lock(&locks);
-	if (assoc_mgr_asset_list) {
+	if (assoc_mgr_tres_list) {
 		memset(&msg, 0, sizeof(dbd_list_msg_t));
-		msg.my_list = assoc_mgr_asset_list;
+		msg.my_list = assoc_mgr_tres_list;
 		/* let us know what to unpack */
-		pack16(DBD_ADD_ASSETS, buffer);
+		pack16(DBD_ADD_TRES, buffer);
 		slurmdbd_pack_list_msg(&msg, SLURM_PROTOCOL_VERSION,
-				       DBD_ADD_ASSETS, buffer);
+				       DBD_ADD_TRES, buffer);
 	}
 
 	if (assoc_mgr_user_list) {
@@ -4677,20 +4677,20 @@ extern int load_assoc_mgr_state(char *state_save_location)
 	while (remaining_buf(buffer) > 0) {
 		safe_unpack16(&type, buffer);
 		switch(type) {
-		case DBD_ADD_ASSETS:
+		case DBD_ADD_TRES:
 			error_code = slurmdbd_unpack_list_msg(
-				&msg, ver, DBD_ADD_ASSETS, buffer);
+				&msg, ver, DBD_ADD_TRES, buffer);
 			if (error_code != SLURM_SUCCESS)
 				goto unpack_error;
 			else if (!msg->my_list) {
-				error("No assets retrieved");
+				error("No tres retrieved");
 				break;
 			}
-			FREE_NULL_LIST(assoc_mgr_asset_list);
-			assoc_mgr_asset_list = msg->my_list;
+			FREE_NULL_LIST(assoc_mgr_tres_list);
+			assoc_mgr_tres_list = msg->my_list;
 
-			debug("Recovered %u assets",
-			      list_count(assoc_mgr_asset_list));
+			debug("Recovered %u tres",
+			      list_count(assoc_mgr_tres_list));
 			msg->my_list = NULL;
 			slurmdbd_free_list_msg(msg);
 			break;
@@ -4833,8 +4833,8 @@ extern int assoc_mgr_refresh_lists(void *db_conn, uint16_t cache_level)
 			    db_conn, init_setup.enforce) == SLURM_ERROR)
 			return SLURM_ERROR;
 
-	if (cache_level & ASSOC_MGR_CACHE_ASSET) {
-		if (_refresh_assoc_mgr_asset_list(
+	if (cache_level & ASSOC_MGR_CACHE_TRES) {
+		if (_refresh_assoc_mgr_tres_list(
 			    db_conn, init_setup.enforce) == SLURM_ERROR)
 			return SLURM_ERROR;
 	}

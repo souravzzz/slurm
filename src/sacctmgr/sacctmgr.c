@@ -982,7 +982,7 @@ sacctmgr [<OPTION>] [<COMMAND>]                                            \n\
                             ParentID, ParentName, Partition, RawQOS, RGT,  \n\
                             User                                           \n\
                                                                            \n\
-       Cluster            - Assets, Classification, Cluster, ClusterNodes, \n\
+       Cluster            - TRES, Classification, Cluster, ClusterNodes, \n\
                             ControlHost, ControlPort, DefaultQOS,          \n\
                             Fairshare, Flags, GrpCPUMins, GrpCPUs, GrpJobs,\n\
                             GrpMemory, GrpNodes, GrpSubmitJob, MaxCPUMins, \n\

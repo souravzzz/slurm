@@ -63,21 +63,21 @@ static int _sort_group_asc(void *v1, void *v2)
 	return 0;
 }
 
-static void _transfer_job_assets_2_group(
-	slurmdb_job_rec_t *job, List *assets)
+static void _transfer_job_tres_2_group(
+	slurmdb_job_rec_t *job, List *tres)
 {
 	ListIterator itr;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
 	xassert(job);
-	xassert(assets);
+	xassert(tres);
 
 	/* get the amount of time this assoc used
 	   during the time we are looking at */
-	itr = list_iterator_create(job->assets);
-	while ((asset_rec = list_next(itr)))
-		slurmdb_add_time_from_count_to_asset_list(
-			asset_rec, assets, job->elapsed);
+	itr = list_iterator_create(job->tres);
+	while ((tres_rec = list_next(itr)))
+		slurmdb_add_time_from_count_to_tres_list(
+			tres_rec, tres, job->elapsed);
 	list_iterator_destroy(itr);
 }
 
@@ -483,12 +483,12 @@ no_objects:
 			acct_group->count++;
 			cluster_group->count++;
 
-			_transfer_job_assets_2_group(
-				job, &job_group->assets);
-			_transfer_job_assets_2_group(
-				job, &acct_group->assets);
-			_transfer_job_assets_2_group(
-				job, &cluster_group->assets);
+			_transfer_job_tres_2_group(
+				job, &job_group->tres);
+			_transfer_job_tres_2_group(
+				job, &acct_group->tres);
+			_transfer_job_tres_2_group(
+				job, &cluster_group->tres);
 		}
 		list_iterator_destroy(local_itr);
 	}

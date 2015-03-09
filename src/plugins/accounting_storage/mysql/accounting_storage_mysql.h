@@ -73,7 +73,7 @@
 
 extern char *acct_coord_table;
 extern char *acct_table;
-extern char *asset_table;
+extern char *tres_table;
 extern char *assoc_day_table;
 extern char *assoc_hour_table;
 extern char *assoc_month_table;
@@ -112,11 +112,11 @@ extern List as_mysql_cluster_list;
 extern List as_mysql_total_cluster_list;
 extern pthread_mutex_t as_mysql_cluster_list_lock;
 
-/* same thing about assets */
-/* full_asset_query is protected by the assoc_mgr_lock_t->asset locks
- * and should be related to the assoc_mgr_asset_list */
-extern char *asset_view_str;
-extern char *full_asset_query;
+/* same thing about tres */
+/* full_tres_query is protected by the assoc_mgr_lock_t->tres locks
+ * and should be related to the assoc_mgr_tres_list */
+extern char *tres_view_str;
+extern char *full_tres_query;
 
 extern uint64_t debug_flags;
 

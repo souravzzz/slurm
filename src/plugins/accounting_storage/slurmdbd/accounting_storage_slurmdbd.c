@@ -164,15 +164,15 @@ static int _setup_job_start_msg(dbd_job_start_msg_t *req,
 
 	req->account       = xstrdup(job_ptr->account);
 
-	if (job_ptr->assets) {
+	if (job_ptr->tres) {
 		ListIterator itr;
-		slurmdb_asset_rec_t *asset_rec, *new_asset;
-		req->assets = list_create(slurmdb_destroy_asset_rec);
-		itr = list_iterator_create(job_ptr->assets);
-		while ((asset_rec = list_next(itr))) {
-			if (!(new_asset = slurmdb_copy_asset_rec(asset_rec)))
+		slurmdb_tres_rec_t *tres_rec, *new_tres;
+		req->tres = list_create(slurmdb_destroy_tres_rec);
+		itr = list_iterator_create(job_ptr->tres);
+		while ((tres_rec = list_next(itr))) {
+			if (!(new_tres = slurmdb_copy_tres_rec(tres_rec)))
 				continue;
-			list_append(req->assets, new_asset);
+			list_append(req->tres, new_tres);
 		}
 		list_iterator_destroy(itr);
 	}
@@ -642,21 +642,21 @@ extern int acct_storage_p_add_clusters(void *db_conn, uint32_t uid,
 	return rc;
 }
 
-extern int acct_storage_p_add_assets(void *db_conn,
-				     uint32_t uid, List asset_list)
+extern int acct_storage_p_add_tres(void *db_conn,
+				     uint32_t uid, List tres_list)
 {
 	slurmdbd_msg_t req;
 	dbd_list_msg_t get_msg;
 	int rc, resp_code;
 
 	/* This means we are updating views which don't apply in this plugin */
-	if (!asset_list)
+	if (!tres_list)
 		return SLURM_SUCCESS;
 
 	memset(&get_msg, 0, sizeof(dbd_list_msg_t));
-	get_msg.my_list = asset_list;
+	get_msg.my_list = tres_list;
 
-	req.msg_type = DBD_ADD_ASSETS;
+	req.msg_type = DBD_ADD_TRES;
 	req.data = &get_msg;
 	rc = slurm_send_slurmdbd_recv_rc_msg(SLURM_PROTOCOL_VERSION,
 					     &req, &resp_code);
@@ -1677,8 +1677,8 @@ extern List acct_storage_p_get_config(void *db_conn, char *config_name)
 	return ret_list;
 }
 
-extern List acct_storage_p_get_assets(void *db_conn, uid_t uid,
-				      slurmdb_asset_cond_t *asset_cond)
+extern List acct_storage_p_get_tres(void *db_conn, uid_t uid,
+				      slurmdb_tres_cond_t *tres_cond)
 {
 	slurmdbd_msg_t req, resp;
 	dbd_cond_msg_t get_msg;
@@ -1687,14 +1687,14 @@ extern List acct_storage_p_get_assets(void *db_conn, uid_t uid,
 	List ret_list = NULL;
 
 	memset(&get_msg, 0, sizeof(dbd_cond_msg_t));
-	get_msg.cond = asset_cond;
+	get_msg.cond = tres_cond;
 
-	req.msg_type = DBD_GET_ASSETS;
+	req.msg_type = DBD_GET_TRES;
 	req.data = &get_msg;
 	rc = slurm_send_recv_slurmdbd_msg(SLURM_PROTOCOL_VERSION, &req, &resp);
 
 	if (rc != SLURM_SUCCESS)
-		error("slurmdbd: DBD_GET_ASSETS failure: %m");
+		error("slurmdbd: DBD_GET_TRES failure: %m");
 	else if (resp.msg_type == DBD_RC) {
 		dbd_rc_msg_t *msg = resp.data;
 		if (msg->return_code == SLURM_SUCCESS) {
@@ -1705,8 +1705,8 @@ extern List acct_storage_p_get_assets(void *db_conn, uid_t uid,
 			error("%s", msg->comment);
 		}
 		slurmdbd_free_rc_msg(msg);
-	} else if (resp.msg_type != DBD_GOT_ASSETS) {
-		error("slurmdbd: response type not DBD_GOT_ASSETS: %u",
+	} else if (resp.msg_type != DBD_GOT_TRES) {
+		error("slurmdbd: response type not DBD_GOT_TRES: %u",
 		      resp.msg_type);
 	} else {
 		got_msg = (dbd_list_msg_t *) resp.data;
@@ -2203,7 +2203,7 @@ extern int clusteracct_storage_p_node_down(void *db_conn,
 		my_reason = node_ptr->reason;
 
 	memset(&req, 0, sizeof(dbd_node_state_msg_t));
-	req.assets     = node_ptr->assets;
+	req.tres     = node_ptr->tres;
 	req.hostlist   = node_ptr->name;
 	req.new_state  = DBD_NODE_STATE_DOWN;
 	req.event_time = event_time;
@@ -2241,24 +2241,24 @@ extern int clusteracct_storage_p_node_up(void *db_conn,
 	return SLURM_SUCCESS;
 }
 
-extern int clusteracct_storage_p_cluster_assets(void *db_conn,
+extern int clusteracct_storage_p_cluster_tres(void *db_conn,
 						char *cluster_nodes,
-						List assets,
+						List tres,
 						time_t event_time)
 {
 	slurmdbd_msg_t msg;
-	dbd_cluster_assets_msg_t req;
+	dbd_cluster_tres_msg_t req;
 	int rc = SLURM_ERROR;
 
-	if (!assets)
+	if (!tres)
 		return rc;
 
-	debug2("Sending %d assets for cluster", list_count(assets));
-	memset(&req, 0, sizeof(dbd_cluster_assets_msg_t));
+	debug2("Sending %d tres for cluster", list_count(tres));
+	memset(&req, 0, sizeof(dbd_cluster_tres_msg_t));
 	req.cluster_nodes = cluster_nodes;
-	req.assets       = assets;
+	req.tres       = tres;
 	req.event_time   = event_time;
-	msg.msg_type     = DBD_CLUSTER_ASSETS;
+	msg.msg_type     = DBD_CLUSTER_TRES;
 	msg.data         = &req;
 
 	slurm_send_slurmdbd_recv_rc_msg(SLURM_PROTOCOL_VERSION, &msg, &rc);
@@ -2758,14 +2758,14 @@ extern int acct_storage_p_flush_jobs_on_cluster(void *db_conn,
 						time_t event_time)
 {
 	slurmdbd_msg_t msg;
-	dbd_cluster_assets_msg_t req;
+	dbd_cluster_tres_msg_t req;
 
 	info("Ending any jobs in accounting that were running when controller "
 	     "went down on");
 
-	memset(&req, 0, sizeof(dbd_cluster_assets_msg_t));
+	memset(&req, 0, sizeof(dbd_cluster_tres_msg_t));
 
-	req.assets       = NULL;
+	req.tres       = NULL;
 	req.event_time   = event_time;
 
 	msg.msg_type     = DBD_FLUSH_JOBS;

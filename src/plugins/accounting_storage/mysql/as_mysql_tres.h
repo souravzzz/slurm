@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  as_mysql_asset.c - functions dealing with assets.
+ *  as_mysql_tres.c - functions dealing with tres.
  *****************************************************************************
  *
  *  Copyright (C) 2015 SchedMD LLC.
@@ -35,19 +35,19 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA.
 \*****************************************************************************/
 
-#ifndef _HAVE_AS_MYSQL_ASSET_H
-#define _HAVE_AS_MYSQL_ASSET_H
+#ifndef _HAVE_AS_MYSQL_TRES_H
+#define _HAVE_AS_MYSQL_TRES_H
 
 #include "accounting_storage_mysql.h"
 
-extern int update_full_asset_query(void);
+extern int update_full_tres_query(void);
 
-extern int update_asset_views(mysql_conn_t *mysql_conn, char *cluster_name);
+extern int update_tres_views(mysql_conn_t *mysql_conn, char *cluster_name);
 
-extern int as_mysql_add_assets(mysql_conn_t *mysql_conn,
-			       uint32_t uid, List asset_list);
+extern int as_mysql_add_tres(mysql_conn_t *mysql_conn,
+			       uint32_t uid, List tres_list);
 
-extern List as_mysql_get_assets(mysql_conn_t *mysql_conn, uid_t uid,
-				slurmdb_asset_cond_t *asset_cond);
+extern List as_mysql_get_tres(mysql_conn_t *mysql_conn, uid_t uid,
+				slurmdb_tres_cond_t *tres_cond);
 
 #endif

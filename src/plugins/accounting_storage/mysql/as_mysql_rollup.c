@@ -63,17 +63,17 @@ typedef struct {
 	uint64_t time_pd;
 	uint64_t time_resv;
 	uint64_t total_time;
-} local_asset_usage_t;
+} local_tres_usage_t;
 
 typedef struct {
 	int id;
-	List loc_assets;
+	List loc_tres;
 } local_id_usage_t;
 
 typedef struct {
 	time_t end;
 	int id; /*only needed for reservations */
-	List loc_assets;
+	List loc_tres;
 	time_t start;
 } local_cluster_usage_t;
 
@@ -87,9 +87,9 @@ typedef struct {
 	uint64_t total_time;
 } local_resv_usage_t;
 
-static void _destroy_local_asset_usage(void *object)
+static void _destroy_local_tres_usage(void *object)
 {
-	local_asset_usage_t *a_usage = (local_asset_usage_t *)object;
+	local_tres_usage_t *a_usage = (local_tres_usage_t *)object;
 	if (a_usage) {
 		xfree(a_usage);
 	}
@@ -107,7 +107,7 @@ static void _destroy_local_cluster_usage(void *object)
 {
 	local_cluster_usage_t *c_usage = (local_cluster_usage_t *)object;
 	if (c_usage) {
-		FREE_NULL_LIST(c_usage->loc_assets);
+		FREE_NULL_LIST(c_usage->loc_tres);
 		xfree(c_usage);
 	}
 }
@@ -122,96 +122,96 @@ static void _destroy_local_resv_usage(void *object)
 	}
 }
 
-static int _find_loc_asset(void *x, void *key)
+static int _find_loc_tres(void *x, void *key)
 {
-	local_asset_usage_t *loc_asset = (local_asset_usage_t *)x;
-	uint32_t asset_id = *(uint32_t *)key;
+	local_tres_usage_t *loc_tres = (local_tres_usage_t *)x;
+	uint32_t tres_id = *(uint32_t *)key;
 
-	if (loc_asset->id == asset_id)
+	if (loc_tres->id == tres_id)
 		return 1;
 	return 0;
 }
 
-static void _remove_job_asset_time_from_cluster(List c_assets, List j_assets,
-						int seconds)
+static void _remove_job_tres_time_from_cluster(List c_tres, List j_tres,
+					       int seconds)
 {
 	ListIterator c_itr;
-	local_asset_usage_t *c_asset, *j_asset;
+	local_tres_usage_t *loc_c_tres, *loc_j_tres;
 
-	if ((seconds <= 0) || !c_assets || !j_assets ||
-	    !list_count(c_assets) || !list_count(j_assets))
+	if ((seconds <= 0) || !c_tres || !j_tres ||
+	    !list_count(c_tres) || !list_count(j_tres))
 		return;
 
-	c_itr = list_iterator_create(c_assets);
-	while ((c_asset = list_next(c_itr))) {
-		if (!(j_asset = list_find_first(
-			      j_assets, _find_loc_asset, &c_asset->id)))
+	c_itr = list_iterator_create(c_tres);
+	while ((loc_c_tres = list_next(c_itr))) {
+		if (!(loc_j_tres = list_find_first(
+			      j_tres, _find_loc_tres, &loc_c_tres->id)))
 			continue;
-		c_asset->total_time -= seconds * j_asset->count;
+		loc_c_tres->total_time -= seconds * loc_j_tres->count;
 	}
 	list_iterator_destroy(c_itr);
 }
 
 
-static void _add_time_asset(List assets, int type, uint32_t id, uint64_t time)
+static void _add_time_tres(List tres, int type, uint32_t id, uint64_t time)
 {
-	local_asset_usage_t *loc_asset;
+	local_tres_usage_t *loc_tres;
 
 	if (!time)
 		return;
 
-	loc_asset = list_find_first(assets, _find_loc_asset, &id);
+	loc_tres = list_find_first(tres, _find_loc_tres, &id);
 
-	if (!loc_asset) {
-		loc_asset = xmalloc(sizeof(local_asset_usage_t));
-		loc_asset->id = id;
-		list_append(assets, loc_asset);
+	if (!loc_tres) {
+		loc_tres = xmalloc(sizeof(local_tres_usage_t));
+		loc_tres->id = id;
+		list_append(tres, loc_tres);
 	}
 
 	switch (type) {
 	case TIME_ALLOC:
-		loc_asset->time_alloc += time;
+		loc_tres->time_alloc += time;
 		break;
 	case TIME_DOWN:
-		loc_asset->time_down += time;
+		loc_tres->time_down += time;
 		break;
 	case TIME_RESV:
-		loc_asset->time_resv += time;
+		loc_tres->time_resv += time;
 		break;
 	default:
-		error("_add_time_asset: unknown type %d given", type);
+		error("_add_time_tres: unknown type %d given", type);
 		break;
 	}
 }
 
-static void _add_job_alloc_time_to_cluster(List c_assets, List j_assets)
+static void _add_job_alloc_time_to_cluster(List c_tres, List j_tres)
 {
-	ListIterator c_itr = list_iterator_create(c_assets);
-	local_asset_usage_t *c_asset, *j_asset;
+	ListIterator c_itr = list_iterator_create(c_tres);
+	local_tres_usage_t *loc_c_tres, *loc_j_tres;
 
-	while ((c_asset = list_next(c_itr))) {
-		if (!(j_asset = list_find_first(j_assets,
-						_find_loc_asset, &c_asset->id)))
+	while ((loc_c_tres = list_next(c_itr))) {
+		if (!(loc_j_tres = list_find_first(
+			      j_tres, _find_loc_tres, &loc_c_tres->id)))
 			continue;
-		c_asset->time_alloc += j_asset->time_alloc;
+		loc_c_tres->time_alloc += loc_j_tres->time_alloc;
 	}
 	list_iterator_destroy(c_itr);
 }
 
-static void _setup_cluster_asset(List assets, uint32_t id,
-				 uint32_t count, int seconds)
+static void _setup_cluster_tres(List tres, uint32_t id,
+				uint32_t count, int seconds)
 {
-	local_asset_usage_t *loc_asset =
-		list_find_first(assets, _find_loc_asset, &id);
+	local_tres_usage_t *loc_tres =
+		list_find_first(tres, _find_loc_tres, &id);
 
-	if (!loc_asset) {
-		loc_asset = xmalloc(sizeof(local_asset_usage_t));
-		loc_asset->id = id;
-		list_append(assets, loc_asset);
+	if (!loc_tres) {
+		loc_tres = xmalloc(sizeof(local_tres_usage_t));
+		loc_tres->id = id;
+		list_append(tres, loc_tres);
 	}
 
-	loc_asset->count = count;
-	loc_asset->total_time += seconds * loc_asset->count;
+	loc_tres->count = count;
+	loc_tres->total_time += seconds * loc_tres->count;
 }
 
 static int _process_purge(mysql_conn_t *mysql_conn,
@@ -270,15 +270,15 @@ static int _process_purge(mysql_conn_t *mysql_conn,
 	return rc;
 }
 
-/* static int _process_cluster_asset_nonhour_usage(mysql_conn_t *mysql_conn, */
+/* static int _process_cluster_tres_nonhour_usage(mysql_conn_t *mysql_conn, */
 /* 						char *cluster_name, */
 /* 						time_t curr_start, */
 /* 						time_t curr_end, */
 /* 						time_t use_start, */
-/* 						local_asset_usage_t *loc_asset) */
+/* 						local_tres_usage_t *loc_tres) */
 /* { */
 /* 	query = xstrdup_printf("insert into \"%s_%s\" " */
-/* 			       "(time_start, id_asset, alloc_secs, " */
+/* 			       "(time_start, id_tres, alloc_secs, " */
 /* 			       "down_secs, pdown_secs, " */
 /* 			       "idle_secs, over_secs, " */
 /* 			       "resv_secs) " */
@@ -294,50 +294,50 @@ static int _process_purge(mysql_conn_t *mysql_conn,
 /* 			       "over_secs=VALUES(over_secs), " */
 /* 			       "resv_secs=VALUES(resv_secs)", */
 /* 			       cluster_name, cluster_hour_ext_table, */
-/* 			       use_start, loc_asset->id, loc_asset->count, */
-/* 			       loc_asset->time_alloc, loc_asset->time_down, */
-/* 			       loc_asset->time_pd, loc_asset->time_idle, */
-/* 			       loc_asset->time_over, loc_asset->time_resv); */
+/* 			       use_start, loc_tres->id, loc_tres->count, */
+/* 			       loc_tres->time_alloc, loc_tres->time_down, */
+/* 			       loc_tres->time_pd, loc_tres->time_idle, */
+/* 			       loc_tres->time_over, loc_tres->time_resv); */
 
 /* } */
 
-static void _setup_cluster_asset_usage(mysql_conn_t *mysql_conn,
-				       char *cluster_name,
-				       time_t curr_start, time_t curr_end,
-				       time_t now, time_t use_start,
-				       local_asset_usage_t *loc_asset,
-				       char **query)
+static void _setup_cluster_tres_usage(mysql_conn_t *mysql_conn,
+				      char *cluster_name,
+				      time_t curr_start, time_t curr_end,
+				      time_t now, time_t use_start,
+				      local_tres_usage_t *loc_tres,
+				      char **query)
 {
 	char start_char[20], end_char[20];
 	uint64_t total_used;
 
-	if (!loc_asset)
+	if (!loc_tres)
 		return;
 
 	/* Now put the lists into the usage tables */
 
 	/* sanity check to make sure we don't have more
 	   allocated cpus than possible. */
-	if (loc_asset->total_time < loc_asset->time_alloc) {
+	if (loc_tres->total_time < loc_tres->time_alloc) {
 		slurm_make_time_str(&curr_start, start_char,
 				    sizeof(start_char));
 		slurm_make_time_str(&curr_end, end_char,
 				    sizeof(end_char));
 		error("We have more allocated time than is "
 		      "possible (%"PRIu64" > %"PRIu64") for "
-		      "cluster %s(%d) from %s - %s asset %u",
-		      loc_asset->time_alloc, loc_asset->total_time,
-		      cluster_name, loc_asset->count,
-		      start_char, end_char, loc_asset->id);
-		loc_asset->time_alloc = loc_asset->total_time;
+		      "cluster %s(%d) from %s - %s tres %u",
+		      loc_tres->time_alloc, loc_tres->total_time,
+		      cluster_name, loc_tres->count,
+		      start_char, end_char, loc_tres->id);
+		loc_tres->time_alloc = loc_tres->total_time;
 	}
 
-	total_used = loc_asset->time_alloc +
-		loc_asset->time_down + loc_asset->time_pd;
+	total_used = loc_tres->time_alloc +
+		loc_tres->time_down + loc_tres->time_pd;
 
 	/* Make sure the total time we care about
 	   doesn't go over the limit */
-	if (loc_asset->total_time < total_used) {
+	if (loc_tres->total_time < total_used) {
 		int64_t overtime;
 
 		slurm_make_time_str(&curr_start, start_char,
@@ -347,93 +347,93 @@ static void _setup_cluster_asset_usage(mysql_conn_t *mysql_conn,
 		error("We have more time than is "
 		      "possible (%"PRIu64"+%"PRIu64"+%"
 		      PRIu64")(%"PRIu64") > %"PRIu64" for "
-		      "cluster %s(%d) from %s - %s asset %u",
-		      loc_asset->time_alloc, loc_asset->time_down,
-		      loc_asset->time_pd, total_used,
-		      loc_asset->total_time,
-		      cluster_name, loc_asset->count,
-		      start_char, end_char, loc_asset->id);
+		      "cluster %s(%d) from %s - %s tres %u",
+		      loc_tres->time_alloc, loc_tres->time_down,
+		      loc_tres->time_pd, total_used,
+		      loc_tres->total_time,
+		      cluster_name, loc_tres->count,
+		      start_char, end_char, loc_tres->id);
 
 		/* First figure out how much actual down time
 		   we have and then how much
 		   planned down time we have. */
-		overtime = (int64_t)(loc_asset->total_time -
-				     (loc_asset->time_alloc +
-				      loc_asset->time_down));
+		overtime = (int64_t)(loc_tres->total_time -
+				     (loc_tres->time_alloc +
+				      loc_tres->time_down));
 		if (overtime < 0) {
-			loc_asset->time_down += overtime;
-			if ((int64_t)loc_asset->time_down < 0)
-				loc_asset->time_down = 0;
+			loc_tres->time_down += overtime;
+			if ((int64_t)loc_tres->time_down < 0)
+				loc_tres->time_down = 0;
 		}
 
-		overtime = (int64_t)(loc_asset->total_time -
-				     (loc_asset->time_alloc +
-				      loc_asset->time_down +
-				      loc_asset->time_pd));
+		overtime = (int64_t)(loc_tres->total_time -
+				     (loc_tres->time_alloc +
+				      loc_tres->time_down +
+				      loc_tres->time_pd));
 		if (overtime < 0) {
-			loc_asset->time_pd += overtime;
-			if ((int64_t)loc_asset->time_pd < 0)
-				loc_asset->time_pd = 0;
+			loc_tres->time_pd += overtime;
+			if ((int64_t)loc_tres->time_pd < 0)
+				loc_tres->time_pd = 0;
 		}
 
-		total_used = loc_asset->time_alloc +
-			loc_asset->time_down + loc_asset->time_pd;
+		total_used = loc_tres->time_alloc +
+			loc_tres->time_down + loc_tres->time_pd;
 		/* info("We now have (%"PRIu64"+%"PRIu64"+" */
 		/*      "%"PRIu64")(%"PRIu64") " */
 		/*       "?= %"PRIu64"", */
-		/*       loc_asset->time_alloc, loc_asset->time_down, */
-		/*       loc_asset->time_pd, total_used, */
-		/*       loc_asset->total_time); */
+		/*       loc_tres->time_alloc, loc_tres->time_down, */
+		/*       loc_tres->time_pd, total_used, */
+		/*       loc_tres->total_time); */
 	}
 
-	loc_asset->time_idle = loc_asset->total_time -
-		total_used - loc_asset->time_resv;
+	loc_tres->time_idle = loc_tres->total_time -
+		total_used - loc_tres->time_resv;
 	/* sanity check just to make sure we have a
 	 * legitimate time after we calulated
 	 * idle/reserved time put extra in the over
 	 * commit field
 	 */
-	/* info("%s got idle of %lld", loc_asset->name, */
-	/*      (int64_t)loc_asset->time_idle); */
-	if ((int64_t)loc_asset->time_idle < 0) {
-		/* info("got %d %d %d", loc_asset->time_resv, */
-		/*      loc_asset->time_idle, loc_asset->time_over); */
-		loc_asset->time_resv += (int64_t)loc_asset->time_idle;
-		loc_asset->time_over -= (int64_t)loc_asset->time_idle;
-		loc_asset->time_idle = 0;
-		if ((int64_t)loc_asset->time_resv < 0)
-			loc_asset->time_resv = 0;
+	/* info("%s got idle of %lld", loc_tres->name, */
+	/*      (int64_t)loc_tres->time_idle); */
+	if ((int64_t)loc_tres->time_idle < 0) {
+		/* info("got %d %d %d", loc_tres->time_resv, */
+		/*      loc_tres->time_idle, loc_tres->time_over); */
+		loc_tres->time_resv += (int64_t)loc_tres->time_idle;
+		loc_tres->time_over -= (int64_t)loc_tres->time_idle;
+		loc_tres->time_idle = 0;
+		if ((int64_t)loc_tres->time_resv < 0)
+			loc_tres->time_resv = 0;
 	}
 
 	/* info("cluster %s(%u) down %"PRIu64" alloc %"PRIu64" " */
 	/*      "resv %"PRIu64" idle %"PRIu64" over %"PRIu64" " */
 	/*      "total= %"PRIu64" ?= %"PRIu64" from %s", */
 	/*      cluster_name, */
-	/*      loc_asset->count, loc_asset->time_down, */
-	/*      loc_asset->time_alloc, */
-	/*      loc_asset->time_resv, loc_asset->time_idle, */
-	/*      loc_asset->time_over, */
-	/*      loc_asset->time_down + loc_asset->time_alloc + */
-	/*      loc_asset->time_resv + loc_asset->time_idle, */
-	/*      loc_asset->total_time, */
-	/*      slurm_ctime(&loc_asset->start)); */
-	/* info("to %s", slurm_ctime(&loc_asset->end)); */
+	/*      loc_tres->count, loc_tres->time_down, */
+	/*      loc_tres->time_alloc, */
+	/*      loc_tres->time_resv, loc_tres->time_idle, */
+	/*      loc_tres->time_over, */
+	/*      loc_tres->time_down + loc_tres->time_alloc + */
+	/*      loc_tres->time_resv + loc_tres->time_idle, */
+	/*      loc_tres->total_time, */
+	/*      slurm_ctime(&loc_tres->start)); */
+	/* info("to %s", slurm_ctime(&loc_tres->end)); */
 	if (*query)
 		xstrfmtcat(*query, ", (%ld, %ld, %ld, %u, %u, "
 			   "%"PRIu64", %"PRIu64", %"PRIu64", "
 			   "%"PRIu64", %"PRIu64", %"PRIu64")",
-			   now, now, use_start, loc_asset->id,
-			   loc_asset->count,
-			   loc_asset->time_alloc,
-			   loc_asset->time_down,
-			   loc_asset->time_pd,
-			   loc_asset->time_idle,
-			   loc_asset->time_over,
-			   loc_asset->time_resv);
+			   now, now, use_start, loc_tres->id,
+			   loc_tres->count,
+			   loc_tres->time_alloc,
+			   loc_tres->time_down,
+			   loc_tres->time_pd,
+			   loc_tres->time_idle,
+			   loc_tres->time_over,
+			   loc_tres->time_resv);
 	else
 		xstrfmtcat(*query, "insert into \"%s_%s\" "
 			   "(creation_time, mod_time, "
-			   "time_start, id_asset, count, "
+			   "time_start, id_tres, count, "
 			   "alloc_secs, down_secs, pdown_secs, "
 			   "idle_secs, over_secs, resv_secs) "
 			   "values (%ld, %ld, %ld, %u, %u, "
@@ -441,14 +441,14 @@ static void _setup_cluster_asset_usage(mysql_conn_t *mysql_conn,
 			   "%"PRIu64", %"PRIu64", %"PRIu64")",
 			   cluster_name, cluster_hour_table,
 			   now, now,
-			   use_start, loc_asset->id,
-			   loc_asset->count,
-			   loc_asset->time_alloc,
-			   loc_asset->time_down,
-			   loc_asset->time_pd,
-			   loc_asset->time_idle,
-			   loc_asset->time_over,
-			   loc_asset->time_resv);
+			   use_start, loc_tres->id,
+			   loc_tres->count,
+			   loc_tres->time_alloc,
+			   loc_tres->time_down,
+			   loc_tres->time_pd,
+			   loc_tres->time_idle,
+			   loc_tres->time_over,
+			   loc_tres->time_resv);
 
 	return;
 }
@@ -461,18 +461,18 @@ static int _process_cluster_usage(mysql_conn_t *mysql_conn,
 	int rc = SLURM_SUCCESS;
 	char *query = NULL;
 	ListIterator itr;
-	local_asset_usage_t *loc_asset;
+	local_tres_usage_t *loc_tres;
 
 	if (!c_usage)
 		return rc;
 	/* Now put the lists into the usage tables */
 
-	xassert(c_usage->loc_assets);
-	itr = list_iterator_create(c_usage->loc_assets);
-	while ((loc_asset = list_next(itr))) {
-		_setup_cluster_asset_usage(mysql_conn, cluster_name,
-					   curr_start, curr_end, now,
-					   c_usage->start, loc_asset, &query);
+	xassert(c_usage->loc_tres);
+	itr = list_iterator_create(c_usage->loc_tres);
+	while ((loc_tres = list_next(itr))) {
+		_setup_cluster_tres_usage(mysql_conn, cluster_name,
+					  curr_start, curr_end, now,
+					  c_usage->start, loc_tres, &query);
 	}
 	list_iterator_destroy(itr);
 
@@ -535,27 +535,27 @@ static int _process_cluster_usage(mysql_conn_t *mysql_conn,
 /* 		   cluster_name, table, id_name, now, now, */
 /* 		   id_usage->id, curr_start); */
 
-/* 	if (!id_usage->loc_assets || !list_count(id_usage->loc_assets)) { */
-/* 		error("%s %d doesn't have any assets", id_name, id_usage->id); */
+/* 	if (!id_usage->loc_tres || !list_count(id_usage->loc_tres)) { */
+/* 		error("%s %d doesn't have any tres", id_name, id_usage->id); */
 /* 		return; */
 /* 	} */
 
 /* 	first = 1; */
-/* 	itr = list_iterator_create(id_usage->loc_assets); */
-/* 	while ((loc_asset = list_next(itr))) { */
+/* 	itr = list_iterator_create(id_usage->loc_tres); */
+/* 	while ((loc_tres = list_next(itr))) { */
 /* 		if (!first) { */
 /* 			xstrfmtcat(*query, */
 /* 				   ", (LAST_INSERT_ID(), %u, %"PRIu64");", */
-/* 				   loc_asset->id, loc_asset->time_alloc); */
+/* 				   loc_tres->id, loc_tres->time_alloc); */
 
 /* 		} else { */
 /* 			first = 0; */
 /* 			xstrfmtcat(*query, */
 /* 				   "insert into \"%s_%s\" " */
-/* 				   "(inx, id_asset, alloc_secs) " */
+/* 				   "(inx, id_tres, alloc_secs) " */
 /* 				   "values (LAST_INSERT_ID(), %u, %"PRIu64")", */
 /* 				   cluster_name, table_ext, */
-/* 				   loc_asset->id, loc_asset->time_alloc); */
+/* 				   loc_tres->id, loc_tres->time_alloc); */
 /* 		} */
 /* 	} */
 /* 	list_iterator_destroy(itr); */
@@ -568,7 +568,7 @@ static void _create_id_usage_insert(char *cluster_name, int type,
 				    local_id_usage_t *id_usage,
 				    char **query)
 {
-	local_asset_usage_t *loc_asset;
+	local_tres_usage_t *loc_tres;
 	ListIterator itr;
 	bool first;
 	char *table = NULL, *id_name = NULL;
@@ -590,29 +590,29 @@ static void _create_id_usage_insert(char *cluster_name, int type,
 		break;
 	}
 
-	if (!id_usage->loc_assets || !list_count(id_usage->loc_assets)) {
-		error("%s %d doesn't have any assets", id_name, id_usage->id);
+	if (!id_usage->loc_tres || !list_count(id_usage->loc_tres)) {
+		error("%s %d doesn't have any tres", id_name, id_usage->id);
 		return;
 	}
 
 	first = 1;
-	itr = list_iterator_create(id_usage->loc_assets);
-	while ((loc_asset = list_next(itr))) {
+	itr = list_iterator_create(id_usage->loc_tres);
+	while ((loc_tres = list_next(itr))) {
 		if (!first) {
 			xstrfmtcat(*query,
 				   ", (%ld, %ld, %u, %ld, %u, %"PRIu64")",
 				   now, now,
-				   id_usage->id, curr_start, loc_asset->id,
-				   loc_asset->time_alloc);
+				   id_usage->id, curr_start, loc_tres->id,
+				   loc_tres->time_alloc);
 		} else {
 			xstrfmtcat(*query,
 				   "insert into \"%s_%s\" "
 				   "(creation_time, mod_time, id, "
-				   "time_start, id_asset, alloc_secs) "
+				   "time_start, id_tres, alloc_secs) "
 				   "values (%ld, %ld, %u, %ld, %u, %"PRIu64")",
 				   cluster_name, table, now, now,
-				   id_usage->id, curr_start, loc_asset->id,
-				   loc_asset->time_alloc);
+				   id_usage->id, curr_start, loc_tres->id,
+				   loc_tres->time_alloc);
 			first = 0;
 		}
 	}
@@ -622,7 +622,7 @@ static void _create_id_usage_insert(char *cluster_name, int type,
 		   "alloc_secs=VALUES(alloc_secs);", now);
 }
 
-/* assoc_mgr_locks on assets need to be read locked before this */
+/* assoc_mgr_locks on tres need to be read locked before this */
 static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 						   char *cluster_name,
 						   time_t curr_start,
@@ -635,7 +635,7 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 	MYSQL_ROW row;
 	int i = 0;
 	ListIterator itr2 = NULL;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
 	char *event_req_inx[] = {
 		"node_name",
@@ -657,7 +657,7 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 		xstrfmtcat(event_str, ", %s", event_req_inx[i]);
 	}
 
-	xstrcat(event_str, full_asset_query);
+	xstrcat(event_str, full_tres_query);
 
 	/* first get the events during this time.  All that is
 	 * except things with the maintainance flag set in the
@@ -681,12 +681,12 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 	}
 	xfree(query);
 
-	itr2 = list_iterator_create(assoc_mgr_asset_list);
+	itr2 = list_iterator_create(assoc_mgr_tres_list);
 	while ((row = mysql_fetch_row(result))) {
 		time_t row_start = slurm_atoul(row[EVENT_REQ_START]);
 		time_t row_end = slurm_atoul(row[EVENT_REQ_END]);
 		uint16_t state = slurm_atoul(row[EVENT_REQ_STATE]);
-		local_asset_usage_t *loc_asset;
+		local_tres_usage_t *loc_tres;
 
 		if (row_start < curr_start)
 			row_start = curr_start;
@@ -716,8 +716,8 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 				loc_c_usage = xmalloc(
 					sizeof(local_cluster_usage_t));
 				loc_c_usage->start = row_start;
-				loc_c_usage->loc_assets =
-					list_create(_destroy_local_asset_usage);
+				loc_c_usage->loc_tres =
+					list_create(_destroy_local_tres_usage);
 				/* If this has a state it
 				   means the slurmctld went
 				   down and we should put this
@@ -735,23 +735,23 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 
 			loc_c_usage->end = row_end;
 
-			xassert(loc_c_usage->loc_assets);
+			xassert(loc_c_usage->loc_tres);
 
 			i = EVENT_REQ_COUNT-1;
 			list_iterator_reset(itr2);
-			while ((asset_rec = list_next(itr2))) {
+			while ((tres_rec = list_next(itr2))) {
 				i++;
-				/* Skip if the asset is NULL,
+				/* Skip if the tres is NULL,
 				 * it means this cluster
 				 * doesn't care about it.
 				 */
 				if (!row[i] || !row[i][0])
 					continue;
 
-				_setup_cluster_asset(loc_c_usage->loc_assets,
-						     asset_rec->id,
-						     slurm_atoul(row[i]),
-						     (row_end - row_start));
+				_setup_cluster_tres(loc_c_usage->loc_tres,
+						    tres_rec->id,
+						    slurm_atoul(row[i]),
+						    (row_end - row_start));
 			}
 
 			continue;
@@ -772,20 +772,20 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 			seconds = (local_end - local_start);
 			if (seconds > 0) {
 				ListIterator c_itr = list_iterator_create(
-					c_usage->loc_assets);
+					c_usage->loc_tres);
 
-				while ((loc_asset = list_next(c_itr))) {
-					/* info("node %s adds asset %d " */
+				while ((loc_tres = list_next(c_itr))) {
+					/* info("node %s adds tres %d " */
 					/*      "(%d)(%d-%d) * %d = %d " */
 					/*      "to %d", */
 					/*      row[EVENT_REQ_NAME], */
-					/*      loc_asset->id, seconds, */
+					/*      loc_tres->id, seconds, */
 					/*      local_end, local_start, */
-					/*      c_asset->count, */
-					/*      seconds * c_asset->count, */
-					/*      c_asset->count); */
-					loc_asset->time_down +=
-						seconds * loc_asset->count;
+					/*      c_tres->count, */
+					/*      seconds * c_tres->count, */
+					/*      c_tres->count); */
+					loc_tres->time_down +=
+						seconds * loc_tres->count;
 				}
 				list_iterator_destroy(c_itr);
 			}
@@ -906,11 +906,11 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 	}
 	assoc_mgr_lock(&locks);
 
-	xstrcat(job_str, full_asset_query);
+	xstrcat(job_str, full_tres_query);
 
 /* 	info("begin start %s", slurm_ctime(&curr_start)); */
 /* 	info("begin end %s", slurm_ctime(&curr_end)); */
-	itr2 = list_iterator_create(assoc_mgr_asset_list);
+	itr2 = list_iterator_create(assoc_mgr_tres_list);
 	a_itr = list_iterator_create(assoc_usage_list);
 	c_itr = list_iterator_create(cluster_down_list);
 	w_itr = list_iterator_create(wckey_usage_list);
@@ -964,7 +964,7 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 		xfree(query);
 
 		if (c_usage)
-			xassert(c_usage->loc_assets);
+			xassert(c_usage->loc_tres);
 
 		/* If a reservation overlaps another reservation we
 		   total up everything here as if they didn't but when
@@ -990,7 +990,7 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 			time_t row_end = slurm_atoul(row[RESV_REQ_END]);
 			uint32_t row_cpu = slurm_atoul(row[RESV_REQ_CPU]);
 			uint32_t row_flags = slurm_atoul(row[RESV_REQ_FLAGS]);
-			local_asset_usage_t *loc_asset;
+			local_tres_usage_t *loc_tres;
 
 			if (row_start < curr_start)
 				row_start = curr_start;
@@ -1033,14 +1033,14 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				continue;
 
 			/* Only able to do CPUs currently */
-			id = ASSET_CPU;
-			loc_asset = list_find_first(c_usage->loc_assets,
-						    _find_loc_asset, &id);
+			id = TRES_CPU;
+			loc_tres = list_find_first(c_usage->loc_tres,
+						   _find_loc_tres, &id);
 
 			if (row_flags & RESERVE_FLAG_MAINT)
-				loc_asset->time_pd += r_usage->total_time;
+				loc_tres->time_pd += r_usage->total_time;
 			else
-				loc_asset->time_alloc += r_usage->total_time;
+				loc_tres->time_alloc += r_usage->total_time;
 
 			/* slurm_make_time_str(&r_usage->start, start_char, */
 			/* 		    sizeof(start_char)); */
@@ -1091,7 +1091,7 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 			time_t row_start = slurm_atoul(row[JOB_REQ_START]);
 			time_t row_end = slurm_atoul(row[JOB_REQ_END]);
 			uint32_t row_rcpu = slurm_atoul(row[JOB_REQ_RCPU]);
-			slurmdb_asset_rec_t *asset_rec;
+			slurmdb_tres_rec_t *tres_rec;
 			uint64_t row_energy = 0;
 			int loc_seconds = 0;
 			seconds = 0;
@@ -1170,8 +1170,8 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				a_usage->id = assoc_id;
 				list_append(assoc_usage_list, a_usage);
 				last_id = assoc_id;
-				a_usage->loc_assets = list_create(
-					_destroy_local_asset_usage);
+				a_usage->loc_tres = list_create(
+					_destroy_local_tres_usage);
 			}
 
 			/* Short circuit this so so we don't get a pointer. */
@@ -1191,41 +1191,41 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 					w_usage->id = wckey_id;
 					list_append(wckey_usage_list,
 						    w_usage);
-					w_usage->loc_assets = list_create(
-						_destroy_local_asset_usage);
+					w_usage->loc_tres = list_create(
+						_destroy_local_tres_usage);
 				}
 				last_wckeyid = wckey_id;
 			}
 
 			i = JOB_REQ_COUNT-1;
 			list_iterator_reset(itr2);
-			while ((asset_rec = list_next(itr2))) {
+			while ((tres_rec = list_next(itr2))) {
 				uint64_t time;
 				i++;
-				/* Skip if the asset is NULL,
+				/* Skip if the tres is NULL,
 				 * it means this cluster
 				 * doesn't care about it.
 				 */
 				if (!row[i] || !row[i][0])
 					continue;
 				time = slurm_atoul(row[i]) * seconds;
-				_add_time_asset(a_usage->loc_assets,
-						TIME_ALLOC, asset_rec->id,
-						time);
+				_add_time_tres(a_usage->loc_tres,
+					       TIME_ALLOC, tres_rec->id,
+					       time);
 				if (w_usage)
-					_add_time_asset(w_usage->loc_assets,
-							TIME_ALLOC,
-							asset_rec->id,
-							time);
+					_add_time_tres(w_usage->loc_tres,
+						       TIME_ALLOC,
+						       tres_rec->id,
+						       time);
 			}
 
-			_add_time_asset(a_usage->loc_assets,
-					TIME_ALLOC, ASSET_ENERGY,
-					row_energy);
+			_add_time_tres(a_usage->loc_tres,
+				       TIME_ALLOC, TRES_ENERGY,
+				       row_energy);
 			if (w_usage)
-				_add_time_asset(
-					w_usage->loc_assets,
-					TIME_ALLOC, ASSET_ENERGY,
+				_add_time_tres(
+					w_usage->loc_tres,
+					TIME_ALLOC, TRES_ENERGY,
 					row_energy);
 
 			/* do the cluster allocated calculation */
@@ -1251,9 +1251,9 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				/*      (uint64_t) */
 				/*      (seconds * row_acpu), */
 				/*      cluster_name); */
-				_remove_job_asset_time_from_cluster(
-					loc_c_usage->loc_assets,
-					a_usage->loc_assets,
+				_remove_job_tres_time_from_cluster(
+					loc_c_usage->loc_tres,
+					a_usage->loc_tres,
 					loc_seconds);
 			}
 
@@ -1298,17 +1298,17 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 					loc_seconds = (temp_end - temp_start);
 
 					if (loc_seconds > 0) {
-						id = ASSET_CPU;
-						local_asset_usage_t *loc_asset =
+						id = TRES_CPU;
+						local_tres_usage_t *loc_tres =
 							list_find_first(
 								a_usage->
-								loc_assets,
-								_find_loc_asset,
+								loc_tres,
+								_find_loc_tres,
 								&id);
-						if (loc_asset) {
+						if (loc_tres) {
 							r_usage->a_cpu +=
 								loc_seconds *
-								loc_asset->
+								loc_tres->
 								count;
 						}
 					}
@@ -1336,8 +1336,8 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				/*      row_acpu); */
 
 				_add_job_alloc_time_to_cluster(
-					c_usage->loc_assets,
-					a_usage->loc_assets);
+					c_usage->loc_tres,
+					a_usage->loc_tres);
 			}
 
 			/* now reserved time */
@@ -1371,9 +1371,9 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 					/*      loc_seconds, */
 					/*      row_rcpu); */
 
-					_add_time_asset(c_usage->loc_assets,
-							TIME_RESV, ASSET_CPU,
-							loc_seconds * row_rcpu);
+					_add_time_tres(c_usage->loc_tres,
+						       TIME_RESV, TRES_CPU,
+						       loc_seconds * row_rcpu);
 				}
 			}
 		}
@@ -1417,12 +1417,12 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 					a_usage->id = associd;
 					list_append(assoc_usage_list, a_usage);
 					last_id = associd;
-					a_usage->loc_assets = list_create(
-						_destroy_local_asset_usage);
+					a_usage->loc_tres = list_create(
+						_destroy_local_tres_usage);
 				}
 				/* This only works with CPUs now. */
-				_add_time_asset(a_usage->loc_assets,
-						TIME_ALLOC, ASSET_CPU, seconds);
+				_add_time_tres(a_usage->loc_tres,
+					       TIME_ALLOC, TRES_CPU, seconds);
 			}
 			list_iterator_destroy(tmp_itr);
 		}
@@ -1431,14 +1431,14 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 		if (c_usage) {
 			list_iterator_reset(c_itr);
 			while ((loc_c_usage = list_next(c_itr))) {
-				local_asset_usage_t *loc_asset;
+				local_tres_usage_t *loc_tres;
 				ListIterator tmp_itr = list_iterator_create(
-					loc_c_usage->loc_assets);
-				while ((loc_asset = list_next(tmp_itr)))
-					_add_time_asset(c_usage->loc_assets,
-							TIME_DOWN,
-							loc_asset->id,
-							loc_asset->total_time);
+					loc_c_usage->loc_tres);
+				while ((loc_tres = list_next(tmp_itr)))
+					_add_time_tres(c_usage->loc_tres,
+						       TIME_DOWN,
+						       loc_tres->id,
+						       loc_tres->total_time);
 				list_iterator_destroy(tmp_itr);
 			}
 
@@ -1572,11 +1572,11 @@ extern int as_mysql_nonhour_rollup(mysql_conn_t *mysql_conn,
 /* 		info("end %s", slurm_ctime(&curr_end)); */
 		query = xstrdup_printf(
 			"insert into \"%s_%s\" (creation_time, mod_time, id, "
-			"id_asset, time_start, alloc_secs) "
-			"select %ld, %ld, id, id_asset, "
+			"id_tres, time_start, alloc_secs) "
+			"select %ld, %ld, id, id_tres, "
 			"%ld, @ASUM:=SUM(alloc_secs) from \"%s_%s\" where "
 			"(time_start < %ld && time_start >= %ld) "
-			"group by id, id_asset on duplicate key update "
+			"group by id, id_tres on duplicate key update "
 			"mod_time=%ld, alloc_secs=@ASUM;",
 			cluster_name,
 			run_month ? assoc_month_table : assoc_day_table,
@@ -1590,11 +1590,11 @@ extern int as_mysql_nonhour_rollup(mysql_conn_t *mysql_conn,
 		*/
 		xstrfmtcat(query,
 			   "insert into \"%s_%s\" (creation_time, "
-			   "mod_time, time_start, id_asset, count, "
+			   "mod_time, time_start, id_tres, count, "
 			   "alloc_secs, down_secs, pdown_secs, "
 			   "idle_secs, over_secs, resv_secs) "
 			   "select %ld, %ld, "
-			   "%ld, id_asset, @CPU:=MAX(count), "
+			   "%ld, id_tres, @CPU:=MAX(count), "
 			   "@ASUM:=SUM(alloc_secs), "
 			   "@DSUM:=SUM(down_secs), "
 			   "@PDSUM:=SUM(pdown_secs), "
@@ -1602,7 +1602,7 @@ extern int as_mysql_nonhour_rollup(mysql_conn_t *mysql_conn,
 			   "@OSUM:=SUM(over_secs), "
 			   "@RSUM:=SUM(resv_secs) from \"%s_%s\" where "
 			   "(time_start < %ld && time_start >= %ld) "
-			   "group by deleted, id_asset "
+			   "group by deleted, id_tres "
 			   "on duplicate key update "
 			   "mod_time=%ld, count=@CPU, "
 			   "alloc_secs=@ASUM, down_secs=@DSUM, "
@@ -1617,12 +1617,12 @@ extern int as_mysql_nonhour_rollup(mysql_conn_t *mysql_conn,
 		if (track_wckey) {
 			xstrfmtcat(query,
 				   "insert into \"%s_%s\" (creation_time, "
-				   "mod_time, id, id_asset, time_start, "
+				   "mod_time, id, id_tres, time_start, "
 				   "alloc_secs) "
 				   "select %ld, %ld, "
-				   "id, id_asset, %ld, @ASUM:=SUM(alloc_secs) "
+				   "id, id_tres, %ld, @ASUM:=SUM(alloc_secs) "
 				   "from \"%s_%s\" where (time_start < %ld && "
-				   "time_start >= %ld) group by id, id_asset "
+				   "time_start >= %ld) group by id, id_tres "
 				   "on duplicate key update "
 				   "mod_time=%ld, alloc_secs=@ASUM;",
 				   cluster_name,

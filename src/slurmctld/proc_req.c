@@ -4802,7 +4802,7 @@ inline static void  _slurm_rpc_accounting_update_msg(slurm_msg_t *msg)
 	if (update_ptr->update_list && list_count(update_ptr->update_list)) {
 		slurmdb_update_object_t *object =
 			list_peek(update_ptr->update_list);
-		if (object->type != SLURMDB_ADD_ASSET) {
+		if (object->type != SLURMDB_ADD_TRES) {
 			/* If not specific message types, send message back
 			 * to the caller immediately letting him know we got it.
 			 * In most cases there is no need to wait since the end

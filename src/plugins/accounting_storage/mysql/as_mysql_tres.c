@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  as_mysql_asset.c - functions dealing with accounts.
+ *  as_mysql_tres.c - functions dealing with accounts.
  *****************************************************************************
  *
  *  Copyright (C) 2015 SchedMD LLC.
@@ -35,45 +35,45 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA.
 \*****************************************************************************/
 
-#include "as_mysql_asset.h"
+#include "as_mysql_tres.h"
 #include "as_mysql_usage.h"
 #include "src/common/xstring.h"
 
-extern int update_full_asset_query(void)
+extern int update_full_tres_query(void)
 {
 	ListIterator itr;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
-	xfree(asset_view_str);
-	xfree(full_asset_query);
-	/* This could probably be done a faster way since assets most
+	xfree(tres_view_str);
+	xfree(full_tres_query);
+	/* This could probably be done a faster way since tres most
 	 * likely won't change that much/often, but this only takes a
 	 * small hit at the beginning of the slurmdbd or whenever a
-	 * new asset is added.  If it becomes an issue we will look at
-	 * only calling this when we know an asset has been
+	 * new tres is added.  If it becomes an issue we will look at
+	 * only calling this when we know an tres has been
 	 * added/removed. */
 
-	xassert(assoc_mgr_asset_list);
-	itr = list_iterator_create(assoc_mgr_asset_list);
-	while ((asset_rec = list_next(itr))) {
-		xstrfmtcat(asset_view_str,
-			   ", max(if(id_asset=%u,count,NULL)) as ext_%u",
-			   asset_rec->id, asset_rec->id);
-		xstrfmtcat(full_asset_query, ", ext_%u", asset_rec->id);
+	xassert(assoc_mgr_tres_list);
+	itr = list_iterator_create(assoc_mgr_tres_list);
+	while ((tres_rec = list_next(itr))) {
+		xstrfmtcat(tres_view_str,
+			   ", max(if(id_tres=%u,count,NULL)) as ext_%u",
+			   tres_rec->id, tres_rec->id);
+		xstrfmtcat(full_tres_query, ", ext_%u", tres_rec->id);
 	}
 	list_iterator_destroy(itr);
 
 	return SLURM_SUCCESS;
 }
 
-/* assoc_mgr_lock_t->asset write must be locked before calling this */
-extern int update_asset_views(mysql_conn_t *mysql_conn, char *cluster_name)
+/* assoc_mgr_lock_t->tres write must be locked before calling this */
+extern int update_tres_views(mysql_conn_t *mysql_conn, char *cluster_name)
 {
 	char *query, *event_ext, *job_ext;
 	int rc = SLURM_SUCCESS;
 
-	xassert(asset_view_str);
-	xassert(full_asset_query);
+	xassert(tres_view_str);
+	xassert(full_tres_query);
 
 	/* Create a view for easy access to the event_ext table	*/
 	event_ext = xstrdup_printf(
@@ -81,10 +81,10 @@ extern int update_asset_views(mysql_conn_t *mysql_conn, char *cluster_name)
 		"create view \"%s_%s\" as (select inx ext_inx %s "
 		"from \"%s_%s\" group by inx);",
 		cluster_name, event_ext_view,
-		cluster_name, event_ext_view, asset_view_str,
+		cluster_name, event_ext_view, tres_view_str,
 		cluster_name, event_ext_table);
 
-	if (debug_flags & DEBUG_FLAG_DB_ASSET)
+	if (debug_flags & DEBUG_FLAG_DB_TRES)
 		DB_DEBUG(mysql_conn->conn, "%s", event_ext);
 	rc = mysql_db_query(mysql_conn, event_ext);
 	xfree(event_ext);
@@ -97,10 +97,10 @@ extern int update_asset_views(mysql_conn_t *mysql_conn, char *cluster_name)
 		"create view \"%s_%s\" as (select job_db_inx ext_job_db_inx %s "
 		"from \"%s_%s\" group by job_db_inx);",
 		cluster_name, job_ext_view,
-		cluster_name, job_ext_view, asset_view_str,
+		cluster_name, job_ext_view, tres_view_str,
 		cluster_name, job_ext_table);
 
-	if (debug_flags & DEBUG_FLAG_DB_ASSET)
+	if (debug_flags & DEBUG_FLAG_DB_TRES)
 		DB_DEBUG(mysql_conn->conn, "%s", job_ext);
 	rc = mysql_db_query(mysql_conn, job_ext);
 	xfree(job_ext);
@@ -125,7 +125,7 @@ extern int update_asset_views(mysql_conn_t *mysql_conn, char *cluster_name)
 		cluster_name, job_table,
 		cluster_name, job_ext_view);
 
-	if (debug_flags & DEBUG_FLAG_DB_ASSET)
+	if (debug_flags & DEBUG_FLAG_DB_TRES)
 		DB_DEBUG(mysql_conn->conn, "%s", query);
 	rc = mysql_db_query(mysql_conn, query);
 	xfree(query);
@@ -135,12 +135,12 @@ extern int update_asset_views(mysql_conn_t *mysql_conn, char *cluster_name)
 	return rc;
 }
 
-extern int as_mysql_add_assets(mysql_conn_t *mysql_conn,
-			       uint32_t uid, List asset_list)
+extern int as_mysql_add_tres(mysql_conn_t *mysql_conn,
+			       uint32_t uid, List tres_list)
 {
 	ListIterator itr = NULL;
 	int rc = SLURM_SUCCESS;
-	slurmdb_asset_rec_t *object = NULL;
+	slurmdb_tres_rec_t *object = NULL;
 	char *cols = NULL, *extra = NULL, *vals = NULL, *query = NULL,
 		*tmp_extra = NULL;
 	time_t now = time(NULL);
@@ -157,20 +157,20 @@ extern int as_mysql_add_assets(mysql_conn_t *mysql_conn,
 		return ESLURM_ACCESS_DENIED;
 
 	/* means just update the views */
-	if (!asset_list)
+	if (!tres_list)
 		goto update_views;
 
 	user_name = uid_to_string((uid_t) uid);
-	itr = list_iterator_create(asset_list);
+	itr = list_iterator_create(tres_list);
 	while ((object = list_next(itr))) {
 		if (!object->type || !object->type[0]) {
-			error("We need a asset type.");
+			error("We need a tres type.");
 			rc = SLURM_ERROR;
 			continue;
 		} else if ((!strcasecmp(object->type, "gres") ||
 			    !strcasecmp(object->type, "license"))) {
 			if (!object->name) {
-				error("%s type assets "
+				error("%s type tres "
 				      "need to have a name, "
 				      "(i.e. Gres/GPU).  You gave none",
 				      object->type);
@@ -192,14 +192,14 @@ extern int as_mysql_add_assets(mysql_conn_t *mysql_conn,
 		xstrfmtcat(query,
 			   "insert into %s (%s) values (%s) "
 			   "on duplicate key update deleted=0;",
-			   asset_table, cols, vals);
+			   tres_table, cols, vals);
 
-		if (debug_flags & DEBUG_FLAG_DB_ASSET)
+		if (debug_flags & DEBUG_FLAG_DB_TRES)
 			DB_DEBUG(mysql_conn->conn, "query\n%s", query);
 		object->id = mysql_db_insert_ret_id(mysql_conn, query);
 		xfree(query);
 		if (!object->id) {
-			error("Couldn't add asset %s%s%s", object->type,
+			error("Couldn't add tres %s%s%s", object->type,
 			      object->name ? "/" : "",
 			      object->name ? object->name : "");
 			xfree(cols);
@@ -225,7 +225,7 @@ extern int as_mysql_add_assets(mysql_conn_t *mysql_conn,
 			   "(timestamp, action, name, actor, info, cluster) "
 			   "values (%ld, %u, 'id=%d', '%s', '%s', '%s');",
 			   txn_table,
-			   now, DBD_ADD_ASSETS, object->id, user_name,
+			   now, DBD_ADD_TRES, object->id, user_name,
 			   tmp_extra, mysql_conn->cluster_name);
 
 		xfree(tmp_extra);
@@ -239,7 +239,7 @@ extern int as_mysql_add_assets(mysql_conn_t *mysql_conn,
 			error("Couldn't add txn");
 		} else {
 			if (addto_update_list(mysql_conn->update_list,
-					      SLURMDB_ADD_ASSET,
+					      SLURMDB_ADD_TRES,
 					      object) == SLURM_SUCCESS)
 				list_remove(itr);
 		}
@@ -263,10 +263,10 @@ update_views:
 	slurm_mutex_lock(&usage_rollup_lock);
 	slurm_mutex_lock(&as_mysql_cluster_list_lock);
 	assoc_mgr_lock(&locks);
-	update_full_asset_query();
+	update_full_tres_query();
 	itr = list_iterator_create(as_mysql_total_cluster_list);
 	while ((cluster_name = list_next(itr)))
-		update_asset_views(mysql_conn, cluster_name);
+		update_tres_views(mysql_conn, cluster_name);
 	list_iterator_destroy(itr);
 	assoc_mgr_unlock(&locks);
 	slurm_mutex_unlock(&as_mysql_cluster_list_lock);
@@ -275,13 +275,13 @@ update_views:
 	return rc;
 }
 
-extern List as_mysql_get_assets(mysql_conn_t *mysql_conn, uid_t uid,
-				slurmdb_asset_cond_t *asset_cond)
+extern List as_mysql_get_tres(mysql_conn_t *mysql_conn, uid_t uid,
+				slurmdb_tres_cond_t *tres_cond)
 {
 	char *query = NULL;
 	char *extra = NULL;
 	char *tmp = NULL;
-	List asset_list = NULL;
+	List tres_list = NULL;
 	ListIterator itr = NULL;
 	char *object = NULL;
 	int set = 0;
@@ -291,7 +291,7 @@ extern List as_mysql_get_assets(mysql_conn_t *mysql_conn, uid_t uid,
 	bool is_admin = false;
 
 	/* if this changes you will need to edit the corresponding enum */
-	char *asset_req_inx[] = {
+	char *tres_req_inx[] = {
 		"id",
 		"type",
 		"name"
@@ -312,21 +312,21 @@ extern List as_mysql_get_assets(mysql_conn_t *mysql_conn, uid_t uid,
 		return NULL;
 	}
 
-	if (!asset_cond) {
+	if (!tres_cond) {
 		xstrcat(extra, "where deleted=0");
 		goto empty;
 	}
 
-	if (asset_cond->with_deleted)
+	if (tres_cond->with_deleted)
 		xstrcat(extra, "where (deleted=0 || deleted=1)");
 	else
 		xstrcat(extra, "where deleted=0");
 
-	if (asset_cond->id_list
-	    && list_count(asset_cond->id_list)) {
+	if (tres_cond->id_list
+	    && list_count(tres_cond->id_list)) {
 		set = 0;
 		xstrcat(extra, " && (");
-		itr = list_iterator_create(asset_cond->id_list);
+		itr = list_iterator_create(tres_cond->id_list);
 		while ((object = list_next(itr))) {
 			if (set)
 				xstrcat(extra, " || ");
@@ -337,11 +337,11 @@ extern List as_mysql_get_assets(mysql_conn_t *mysql_conn, uid_t uid,
 		xstrcat(extra, ")");
 	}
 
-	if (asset_cond->type_list
-	    && list_count(asset_cond->type_list)) {
+	if (tres_cond->type_list
+	    && list_count(tres_cond->type_list)) {
 		set = 0;
 		xstrcat(extra, " && (");
-		itr = list_iterator_create(asset_cond->type_list);
+		itr = list_iterator_create(tres_cond->type_list);
 		while ((object = list_next(itr))) {
 			if (set)
 				xstrcat(extra, " || ");
@@ -352,11 +352,11 @@ extern List as_mysql_get_assets(mysql_conn_t *mysql_conn, uid_t uid,
 		xstrcat(extra, ")");
 	}
 
-	if (asset_cond->name_list
-	    && list_count(asset_cond->name_list)) {
+	if (tres_cond->name_list
+	    && list_count(tres_cond->name_list)) {
 		set = 0;
 		xstrcat(extra, " && (");
-		itr = list_iterator_create(asset_cond->name_list);
+		itr = list_iterator_create(tres_cond->name_list);
 		while ((object = list_next(itr))) {
 			if (set)
 				xstrcat(extra, " || ");
@@ -370,16 +370,16 @@ extern List as_mysql_get_assets(mysql_conn_t *mysql_conn, uid_t uid,
 empty:
 
 	xfree(tmp);
-	xstrfmtcat(tmp, "%s", asset_req_inx[i]);
+	xstrfmtcat(tmp, "%s", tres_req_inx[i]);
 	for(i=1; i<SLURMDB_REQ_COUNT; i++) {
-		xstrfmtcat(tmp, ", %s", asset_req_inx[i]);
+		xstrfmtcat(tmp, ", %s", tres_req_inx[i]);
 	}
 
-	query = xstrdup_printf("select %s from %s %s", tmp, asset_table, extra);
+	query = xstrdup_printf("select %s from %s %s", tmp, tres_table, extra);
 	xfree(tmp);
 	xfree(extra);
 
-	if (debug_flags & DEBUG_FLAG_DB_ASSET)
+	if (debug_flags & DEBUG_FLAG_DB_TRES)
 		DB_DEBUG(mysql_conn->conn, "query\n%s", query);
 	if (!(result = mysql_db_query_ret(mysql_conn, query, 0))) {
 		xfree(query);
@@ -387,20 +387,20 @@ empty:
 	}
 	xfree(query);
 
-	asset_list = list_create(slurmdb_destroy_asset_rec);
+	tres_list = list_create(slurmdb_destroy_tres_rec);
 
 	while ((row = mysql_fetch_row(result))) {
-		slurmdb_asset_rec_t *asset =
-			xmalloc(sizeof(slurmdb_asset_rec_t));
-		list_append(asset_list, asset);
+		slurmdb_tres_rec_t *tres =
+			xmalloc(sizeof(slurmdb_tres_rec_t));
+		list_append(tres_list, tres);
 
-		asset->id =  slurm_atoul(row[SLURMDB_REQ_ID]);
+		tres->id =  slurm_atoul(row[SLURMDB_REQ_ID]);
 		if (row[SLURMDB_REQ_TYPE] && row[SLURMDB_REQ_TYPE][0])
-			asset->type = xstrdup(row[SLURMDB_REQ_TYPE]);
+			tres->type = xstrdup(row[SLURMDB_REQ_TYPE]);
 		if (row[SLURMDB_REQ_NAME] && row[SLURMDB_REQ_NAME][0])
-			asset->name = xstrdup(row[SLURMDB_REQ_NAME]);
+			tres->name = xstrdup(row[SLURMDB_REQ_NAME]);
 	}
 	mysql_free_result(result);
 
-	return asset_list;
+	return tres_list;
 }

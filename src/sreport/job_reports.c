@@ -727,14 +727,14 @@ static int _run_report(int type, int argc, char *argv[])
 	cluster_itr = list_iterator_create(
 		slurmdb_report_cluster_grouping_list);
 	while ((cluster_group = list_next(cluster_itr))) {
-		uint32_t asset_id = ASSET_CPU;
-		slurmdb_asset_rec_t *cluster_cpu_asset_rec;
+		uint32_t tres_id = TRES_CPU;
+		slurmdb_tres_rec_t *cluster_cpu_tres_rec;
 
-		if (!(cluster_cpu_asset_rec = list_find_first(
-			      cluster_group->assets,
-			      slurmdb_find_asset_in_list,
-			      &asset_id))) {
-			info("error, no cpu(%d) asset!", asset_id);
+		if (!(cluster_cpu_tres_rec = list_find_first(
+			      cluster_group->tres,
+			      slurmdb_find_tres_in_list,
+			      &tres_id))) {
+			info("error, no cpu(%d) tres!", tres_id);
 			continue;
 		}
 
@@ -742,13 +742,13 @@ static int _run_report(int type, int argc, char *argv[])
 		          (ListCmpF)_sort_acct_grouping_dec);
 		acct_itr = list_iterator_create(cluster_group->acct_list);
 		while ((acct_group = list_next(acct_itr))) {
-			slurmdb_asset_rec_t *acct_cpu_asset_rec;
+			slurmdb_tres_rec_t *acct_cpu_tres_rec;
 
-			if (!(acct_cpu_asset_rec = list_find_first(
-				      acct_group->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no cpu(%d) asset!", asset_id);
+			if (!(acct_cpu_tres_rec = list_find_first(
+				      acct_group->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no cpu(%d) tres!", tres_id);
 				continue;
 			}
 
@@ -775,14 +775,14 @@ static int _run_report(int type, int argc, char *argv[])
 			list_iterator_reset(itr);
 			local_itr = list_iterator_create(acct_group->groups);
 			while ((job_group = list_next(local_itr))) {
-				slurmdb_asset_rec_t *job_cpu_asset_rec;
+				slurmdb_tres_rec_t *job_cpu_tres_rec;
 
-				if (!(job_cpu_asset_rec = list_find_first(
-					      job_group->assets,
-					      slurmdb_find_asset_in_list,
-					      &asset_id))) {
-					info("error, no cpu(%d) asset!",
-					     asset_id);
+				if (!(job_cpu_tres_rec = list_find_first(
+					      job_group->tres,
+					      slurmdb_find_tres_in_list,
+					      &tres_id))) {
+					info("error, no cpu(%d) tres!",
+					     tres_id);
 					continue;
 				}
 
@@ -791,8 +791,8 @@ static int _run_report(int type, int argc, char *argv[])
 				case PRINT_JOB_SIZE:
 					field->print_routine(
 						field,
-						job_cpu_asset_rec->alloc_secs,
-						acct_cpu_asset_rec->alloc_secs,
+						job_cpu_tres_rec->alloc_secs,
+						acct_cpu_tres_rec->alloc_secs,
 						0);
 					break;
 				case PRINT_JOB_COUNT:
@@ -814,8 +814,8 @@ static int _run_report(int type, int argc, char *argv[])
 			temp_format = time_format;
 			time_format = SLURMDB_REPORT_TIME_PERCENT;
 			if (!print_job_count) {
-				count1 = acct_cpu_asset_rec->alloc_secs;
-				count2 = cluster_cpu_asset_rec->alloc_secs;
+				count1 = acct_cpu_tres_rec->alloc_secs;
+				count2 = cluster_cpu_tres_rec->alloc_secs;
 			} else {
 				count1 = acct_group->count;
 				count2 = cluster_group->count;

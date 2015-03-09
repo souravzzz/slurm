@@ -540,15 +540,15 @@ static int _build_all_nodeline_info(void)
 	return rc;
 }
 
-static int _init_assets(void)
+static int _init_tres(void)
 {
-	char *temp_char = slurm_get_accounting_storage_assets();
+	char *temp_char = slurm_get_accounting_storage_tres();
 	List char_list;
 	List add_list = NULL;
-	slurmdb_asset_rec_t *asset_rec;
+	slurmdb_tres_rec_t *tres_rec;
 
 	if (!temp_char) {
-		error("No assets defined, this should never happen");
+		error("No tres defined, this should never happen");
 		return SLURM_ERROR;
 	}
 
@@ -558,80 +558,80 @@ static int _init_assets(void)
 
 	if (!list_count(char_list)) {
 		FREE_NULL_LIST(char_list);
-		error("Asset list is empty, this should never happen");
+		error("TRES list is empty, this should never happen");
 		return SLURM_ERROR;
 	}
 
-	FREE_NULL_LIST(asset_list);
-	asset_list = list_create(slurmdb_destroy_asset_rec);
+	FREE_NULL_LIST(tres_list);
+	tres_list = list_create(slurmdb_destroy_tres_rec);
 	while ((temp_char = list_pop(char_list))) {
-		asset_rec = xmalloc(sizeof(slurmdb_asset_rec_t));
+		tres_rec = xmalloc(sizeof(slurmdb_tres_rec_t));
 
-		asset_rec->type = temp_char;
+		tres_rec->type = temp_char;
 
 		if (!strcasecmp(temp_char, "cpu") ||
 		    !strcasecmp(temp_char, "mem") ||
 		    !strcasecmp(temp_char, "energy")) {
 		} else if (!strncasecmp(temp_char, "gres/", 5)) {
-			asset_rec->type[4] = '\0';
-			asset_rec->name = xstrdup(temp_char+5);
-			if (!asset_rec->name)
-				fatal("Gres type assets need to have a name, "
+			tres_rec->type[4] = '\0';
+			tres_rec->name = xstrdup(temp_char+5);
+			if (!tres_rec->name)
+				fatal("Gres type tres need to have a name, "
 				      "(i.e. Gres/GPU).  You gave %s",
 				      temp_char);
 		} else if (!strncasecmp(temp_char, "license/", 8)) {
-			asset_rec->type[7] = '\0';
-			asset_rec->name = xstrdup(temp_char+8);
-			if (!asset_rec->name)
-				fatal("License type assets need to "
+			tres_rec->type[7] = '\0';
+			tres_rec->name = xstrdup(temp_char+8);
+			if (!tres_rec->name)
+				fatal("License type tres need to "
 				      "have a name, (i.e. License/Foo).  "
 				      "You gave %s",
 				      temp_char);
 		} else {
-			fatal("Unknown asset type '%s', acceptiable types are "
+			fatal("Unknown tres type '%s', acceptiable types are "
 			      "CPU,Gres/,License/,Mem", temp_char);
-			xfree(asset_rec->type);
-			xfree(asset_rec);
+			xfree(tres_rec->type);
+			xfree(tres_rec);
 		}
 
-		if (assoc_mgr_fill_in_asset(acct_db_conn, asset_rec, 1, NULL, 0)
+		if (assoc_mgr_fill_in_tres(acct_db_conn, tres_rec, 1, NULL, 0)
 		    != SLURM_SUCCESS) {
 			if (!add_list)
 				add_list = list_create(
-					slurmdb_destroy_asset_rec);
-			info("Couldn't find asset %s%s%s in the database, "
+					slurmdb_destroy_tres_rec);
+			info("Couldn't find tres %s%s%s in the database, "
 			     "creating.",
-			     asset_rec->type, asset_rec->name ? "/" : "",
-			     asset_rec->name ? asset_rec->name : "");
-			list_append(add_list, asset_rec);
+			     tres_rec->type, tres_rec->name ? "/" : "",
+			     tres_rec->name ? tres_rec->name : "");
+			list_append(add_list, tres_rec);
 		} else
-			list_append(asset_list, asset_rec);
+			list_append(tres_list, tres_rec);
 	}
 
 	if (add_list) {
-		if (acct_storage_g_add_assets(acct_db_conn, getuid(), add_list)
+		if (acct_storage_g_add_tres(acct_db_conn, getuid(), add_list)
 		    != SLURM_SUCCESS)
-			fatal("Problem adding assets to the database, "
+			fatal("Problem adding tres to the database, "
 			      "can't continue until database is able to "
-			      "make new assets");
+			      "make new tres");
 		/* refresh list here since the updates are not
 		   sent dynamically */
-		assoc_mgr_refresh_lists(acct_db_conn, ASSOC_MGR_CACHE_ASSET);
+		assoc_mgr_refresh_lists(acct_db_conn, ASSOC_MGR_CACHE_TRES);
 
-		while ((asset_rec = list_pop(add_list))) {
-			if (assoc_mgr_fill_in_asset(acct_db_conn, asset_rec,
+		while ((tres_rec = list_pop(add_list))) {
+			if (assoc_mgr_fill_in_tres(acct_db_conn, tres_rec,
 						    1, NULL, 0)
 			    != SLURM_SUCCESS) {
-				fatal("Unknown asset %s%s%s after adding.  "
+				fatal("Unknown tres %s%s%s after adding.  "
 				      "It appears "
 				      "there may be a problem with the "
 				      "slurmdbd communicating with the "
 				      "slurmctld.",
-				      asset_rec->type,
-				      asset_rec->name ? "/" : "",
-				      asset_rec->name ? asset_rec->name : "");
+				      tres_rec->type,
+				      tres_rec->name ? "/" : "",
+				      tres_rec->name ? tres_rec->name : "");
 			} else
-				list_append(asset_list, asset_rec);
+				list_append(tres_list, tres_rec);
 		}
 	}
 	return SLURM_SUCCESS;
@@ -1035,7 +1035,7 @@ int read_slurm_conf(int recover, bool reconfig)
 		return error_code;
 	}
 
-	_init_assets();
+	_init_tres();
 
 	if (slurm_layouts_init() != SLURM_SUCCESS)
 		fatal("Failed to initialize the layouts framework");
@@ -1932,7 +1932,7 @@ static int _sync_nodes_to_comp_job(void)
 			   plugin and this happens before it is
 			   normally set up so do it now.
 			*/
-			set_cluster_assets();
+			set_cluster_tres();
 
 			info("%s: Job %u in completing state",
 			     __func__, job_ptr->job_id);

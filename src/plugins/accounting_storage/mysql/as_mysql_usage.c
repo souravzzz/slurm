@@ -420,13 +420,13 @@ static int _get_object_usage(mysql_conn_t *mysql_conn,
 
 	char *usage_req_inx[] = {
 		"t1.id",
-		"t1.id_asset",
+		"t1.id_tres",
 		"t1.time_start",
 		"t1.alloc_secs",
 	};
 	enum {
 		USAGE_ID,
-		USAGE_ASSET,
+		USAGE_TRES,
 		USAGE_START,
 		USAGE_ALLOC,
 		USAGE_COUNT
@@ -478,18 +478,18 @@ static int _get_object_usage(mysql_conn_t *mysql_conn,
 
 	assoc_mgr_lock(&locks);
 	while ((row = mysql_fetch_row(result))) {
-		slurmdb_asset_rec_t *asset_rec;
+		slurmdb_tres_rec_t *tres_rec;
 		slurmdb_accounting_rec_t *accounting_rec =
 			xmalloc(sizeof(slurmdb_accounting_rec_t));
 
-		accounting_rec->asset_rec.id = slurm_atoul(row[USAGE_ASSET]);
-		if ((asset_rec = list_find_first(
-			     assoc_mgr_asset_list, slurmdb_find_asset_in_list,
-			     &accounting_rec->asset_rec.id))) {
-			accounting_rec->asset_rec.name =
-				xstrdup(asset_rec->name);
-			accounting_rec->asset_rec.type =
-				xstrdup(asset_rec->type);
+		accounting_rec->tres_rec.id = slurm_atoul(row[USAGE_TRES]);
+		if ((tres_rec = list_find_first(
+			     assoc_mgr_tres_list, slurmdb_find_tres_in_list,
+			     &accounting_rec->tres_rec.id))) {
+			accounting_rec->tres_rec.name =
+				xstrdup(tres_rec->name);
+			accounting_rec->tres_rec.type =
+				xstrdup(tres_rec->type);
 		}
 
 		accounting_rec->id = slurm_atoul(row[USAGE_ID]);
@@ -521,7 +521,7 @@ static int _get_cluster_usage(mysql_conn_t *mysql_conn, uid_t uid,
 	assoc_mgr_lock_t locks = { READ_LOCK, NO_LOCK, NO_LOCK,
 				   NO_LOCK, NO_LOCK, NO_LOCK, NO_LOCK };
 	char *cluster_req_inx[] = {
-		"id_asset",
+		"id_tres",
 		"alloc_secs",
 		"down_secs",
 		"pdown_secs",
@@ -533,7 +533,7 @@ static int _get_cluster_usage(mysql_conn_t *mysql_conn, uid_t uid,
 	};
 
 	enum {
-		CLUSTER_ASSET,
+		CLUSTER_TRES,
 		CLUSTER_ACPU,
 		CLUSTER_DCPU,
 		CLUSTER_PDCPU,
@@ -550,8 +550,8 @@ static int _get_cluster_usage(mysql_conn_t *mysql_conn, uid_t uid,
 		return SLURM_ERROR;
 	}
 
-	if (!cluster_rec->assets &&
-	    ((rc = as_mysql_cluster_get_assets(mysql_conn, cluster_rec))
+	if (!cluster_rec->tres &&
+	    ((rc = as_mysql_cluster_get_tres(mysql_conn, cluster_rec))
 	     != SLURM_SUCCESS))
 		return rc;
 
@@ -588,19 +588,19 @@ static int _get_cluster_usage(mysql_conn_t *mysql_conn, uid_t uid,
 
 	assoc_mgr_lock(&locks);
 	while ((row = mysql_fetch_row(result))) {
-		slurmdb_asset_rec_t *asset_rec;
+		slurmdb_tres_rec_t *tres_rec;
 		slurmdb_cluster_accounting_rec_t *accounting_rec =
 			xmalloc(sizeof(slurmdb_cluster_accounting_rec_t));
 
-		accounting_rec->asset_rec.id = slurm_atoul(row[CLUSTER_ASSET]);
-		accounting_rec->asset_rec.count = slurm_atoul(row[CLUSTER_CNT]);
-		if ((asset_rec = list_find_first(
-			     assoc_mgr_asset_list, slurmdb_find_asset_in_list,
-			     &accounting_rec->asset_rec.id))) {
-			accounting_rec->asset_rec.name =
-				xstrdup(asset_rec->name);
-			accounting_rec->asset_rec.type =
-				xstrdup(asset_rec->type);
+		accounting_rec->tres_rec.id = slurm_atoul(row[CLUSTER_TRES]);
+		accounting_rec->tres_rec.count = slurm_atoul(row[CLUSTER_CNT]);
+		if ((tres_rec = list_find_first(
+			     assoc_mgr_tres_list, slurmdb_find_tres_in_list,
+			     &accounting_rec->tres_rec.id))) {
+			accounting_rec->tres_rec.name =
+				xstrdup(tres_rec->name);
+			accounting_rec->tres_rec.type =
+				xstrdup(tres_rec->type);
 		}
 
 		accounting_rec->alloc_secs = slurm_atoull(row[CLUSTER_ACPU]);

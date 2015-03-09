@@ -313,14 +313,14 @@ extern int user_top(int argc, char *argv[])
 	cluster_itr = list_iterator_create(slurmdb_report_cluster_list);
 	while((slurmdb_report_cluster = list_next(cluster_itr))) {
 		int count = 0;
-		uint32_t asset_id = ASSET_CPU;
-		slurmdb_asset_rec_t *cluster_cpu_asset_rec;
+		uint32_t tres_id = TRES_CPU;
+		slurmdb_tres_rec_t *cluster_cpu_tres_rec;
 
-		if (!(cluster_cpu_asset_rec = list_find_first(
-			      slurmdb_report_cluster->assets,
-			      slurmdb_find_asset_in_list,
-			      &asset_id))) {
-			info("error, no cpu(%d) asset!", asset_id);
+		if (!(cluster_cpu_tres_rec = list_find_first(
+			      slurmdb_report_cluster->tres,
+			      slurmdb_find_tres_in_list,
+			      &tres_id))) {
+			info("error, no cpu(%d) tres!", tres_id);
 			continue;
 		}
 
@@ -329,26 +329,26 @@ extern int user_top(int argc, char *argv[])
 
 		itr = list_iterator_create(slurmdb_report_cluster->user_list);
 		while ((slurmdb_report_user = list_next(itr))) {
-			slurmdb_asset_rec_t *cpu_asset_rec, *energy_asset_rec;
+			slurmdb_tres_rec_t *cpu_tres_rec, *energy_tres_rec;
 			int curr_inx = 1;
 
-			asset_id = ASSET_CPU;
+			tres_id = TRES_CPU;
 
-			if (!(cpu_asset_rec = list_find_first(
-				      slurmdb_report_user->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no cpu(%d) asset!", asset_id);
+			if (!(cpu_tres_rec = list_find_first(
+				      slurmdb_report_user->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no cpu(%d) tres!", tres_id);
 				continue;
 			}
 
-			asset_id = ASSET_ENERGY;
+			tres_id = TRES_ENERGY;
 
-			if (!(energy_asset_rec = list_find_first(
-				      slurmdb_report_user->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no energy(%d) asset!", asset_id);
+			if (!(energy_tres_rec = list_find_first(
+				      slurmdb_report_user->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no energy(%d) tres!", tres_id);
 				continue;
 			}
 
@@ -404,15 +404,15 @@ extern int user_top(int argc, char *argv[])
 				case PRINT_USER_USED:
 					field->print_routine(
 						field,
-						cpu_asset_rec->alloc_secs,
-						cluster_cpu_asset_rec->
+						cpu_tres_rec->alloc_secs,
+						cluster_cpu_tres_rec->
 						alloc_secs,
 						(curr_inx == field_count));
 					break;
 				case PRINT_USER_ENERGY:
 					field->print_routine(
 						field,
-						energy_asset_rec->alloc_secs,
+						energy_tres_rec->alloc_secs,
 						(curr_inx ==field_count));
 					break;
 				default:

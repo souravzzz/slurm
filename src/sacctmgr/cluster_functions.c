@@ -491,9 +491,9 @@ extern int sacctmgr_list_cluster(int argc, char *argv[])
 							     classification),
 						     (curr_inx == field_count));
 				break;
-			case PRINT_ASSETS:
-				tmp_char = slurmdb_make_asset_string(
-					cluster->assets);
+			case PRINT_TRES:
+				tmp_char = slurmdb_make_tres_string(
+					cluster->tres);
 				field->print_routine(field,
 						     tmp_char,
 						     (curr_inx == field_count));

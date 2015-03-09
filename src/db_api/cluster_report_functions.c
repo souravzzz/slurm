@@ -95,8 +95,8 @@ static void _process_ua(List user_list, slurmdb_assoc_rec_t *assoc)
 
 	/* get the amount of time this assoc used
 	   during the time we are looking at */
-	slurmdb_transfer_acct_list_2_asset(assoc->accounting_list,
-					   &slurmdb_report_user->assets);
+	slurmdb_transfer_acct_list_2_tres(assoc->accounting_list,
+					   &slurmdb_report_user->tres);
 }
 
 static void _process_au(List assoc_list, slurmdb_assoc_rec_t *assoc)
@@ -113,8 +113,8 @@ static void _process_au(List assoc_list, slurmdb_assoc_rec_t *assoc)
 
 	/* get the amount of time this assoc used
 	   during the time we are looking at */
-	slurmdb_transfer_acct_list_2_asset(assoc->accounting_list,
-					   &slurmdb_report_assoc->assets);
+	slurmdb_transfer_acct_list_2_tres(assoc->accounting_list,
+					   &slurmdb_report_assoc->tres);
 }
 
 static void _process_uw(List user_list, slurmdb_wckey_rec_t *wckey)
@@ -141,8 +141,8 @@ static void _process_uw(List user_list, slurmdb_wckey_rec_t *wckey)
 
 	/* get the amount of time this wckey used
 	   during the time we are looking at */
-	slurmdb_transfer_acct_list_2_asset(wckey->accounting_list,
-					   &slurmdb_report_user->assets);
+	slurmdb_transfer_acct_list_2_tres(wckey->accounting_list,
+					   &slurmdb_report_user->tres);
 }
 
 static void _process_wu(List assoc_list, slurmdb_wckey_rec_t *wckey)
@@ -176,10 +176,10 @@ static void _process_wu(List assoc_list, slurmdb_wckey_rec_t *wckey)
 
 	/* get the amount of time this wckey used
 	   during the time we are looking at */
-	slurmdb_transfer_acct_list_2_asset(wckey->accounting_list,
-					   &slurmdb_report_assoc->assets);
-	slurmdb_transfer_acct_list_2_asset(wckey->accounting_list,
-					   &parent_assoc->assets);
+	slurmdb_transfer_acct_list_2_tres(wckey->accounting_list,
+					   &slurmdb_report_assoc->tres);
+	slurmdb_transfer_acct_list_2_tres(wckey->accounting_list,
+					   &parent_assoc->tres);
 }
 
 static void _process_assoc_type(

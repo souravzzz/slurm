@@ -662,24 +662,24 @@ extern int cluster_account_by_user(int argc, char *argv[])
 
 	cluster_itr = list_iterator_create(slurmdb_report_cluster_list);
 	while((slurmdb_report_cluster = list_next(cluster_itr))) {
-		uint32_t asset_id = ASSET_CPU;
-		slurmdb_asset_rec_t *cluster_cpu_asset_rec,
-			*cluster_energy_asset_rec;
+		uint32_t tres_id = TRES_CPU;
+		slurmdb_tres_rec_t *cluster_cpu_tres_rec,
+			*cluster_energy_tres_rec;
 
-		if (!(cluster_cpu_asset_rec = list_find_first(
-			      slurmdb_report_cluster->assets,
-			      slurmdb_find_asset_in_list,
-			      &asset_id))) {
-			info("error, no cpu(%d) asset!", asset_id);
+		if (!(cluster_cpu_tres_rec = list_find_first(
+			      slurmdb_report_cluster->tres,
+			      slurmdb_find_tres_in_list,
+			      &tres_id))) {
+			info("error, no cpu(%d) tres!", tres_id);
 			continue;
 		}
 
-		asset_id = ASSET_ENERGY;
-		if (!(cluster_energy_asset_rec = list_find_first(
-			      slurmdb_report_cluster->assets,
-			      slurmdb_find_asset_in_list,
-			      &asset_id))) {
-			info("error, no energy(%d) asset!", asset_id);
+		tres_id = TRES_ENERGY;
+		if (!(cluster_energy_tres_rec = list_find_first(
+			      slurmdb_report_cluster->tres,
+			      slurmdb_find_tres_in_list,
+			      &tres_id))) {
+			info("error, no energy(%d) tres!", tres_id);
 			continue;
 		}
 
@@ -692,30 +692,30 @@ extern int cluster_account_by_user(int argc, char *argv[])
 
 		itr = list_iterator_create(slurmdb_report_cluster->assoc_list);
 		while ((slurmdb_report_assoc = list_next(itr))) {
-			slurmdb_asset_rec_t *cpu_asset_rec, *energy_asset_rec;
+			slurmdb_tres_rec_t *cpu_tres_rec, *energy_tres_rec;
 			int curr_inx = 1;
 
-			asset_id = ASSET_CPU;
+			tres_id = TRES_CPU;
 
-			if (!(cpu_asset_rec = list_find_first(
-				      slurmdb_report_assoc->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no cpu(%d) asset!", asset_id);
+			if (!(cpu_tres_rec = list_find_first(
+				      slurmdb_report_assoc->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no cpu(%d) tres!", tres_id);
 				continue;
 			}
 
 			/* we don't care if they didn't use any time */
-			if (!cpu_asset_rec->alloc_secs)
+			if (!cpu_tres_rec->alloc_secs)
 				continue;
 
-			asset_id = ASSET_ENERGY;
+			tres_id = TRES_ENERGY;
 
-			if (!(energy_asset_rec = list_find_first(
-				      slurmdb_report_assoc->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no energy(%d) asset!", asset_id);
+			if (!(energy_tres_rec = list_find_first(
+				      slurmdb_report_assoc->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no energy(%d) tres!", tres_id);
 				continue;
 			}
 
@@ -788,16 +788,16 @@ extern int cluster_account_by_user(int argc, char *argv[])
 				case PRINT_CLUSTER_AMOUNT_USED:
 					field->print_routine(
 						field,
-						cpu_asset_rec->alloc_secs,
-						cluster_cpu_asset_rec->
+						cpu_tres_rec->alloc_secs,
+						cluster_cpu_tres_rec->
 						alloc_secs,
 						(curr_inx == field_count));
 					break;
                                 case PRINT_CLUSTER_ENERGY:
                                         field->print_routine(
                                                 field,
-                                                energy_asset_rec->alloc_secs,
-						cluster_energy_asset_rec->
+                                                energy_tres_rec->alloc_secs,
+						cluster_energy_tres_rec->
 						alloc_secs,
                                                 (curr_inx == field_count));
                                         break;
@@ -900,24 +900,24 @@ extern int cluster_user_by_account(int argc, char *argv[])
 	field_count = list_count(print_fields_list);
 	cluster_itr = list_iterator_create(slurmdb_report_cluster_list);
 	while ((slurmdb_report_cluster = list_next(cluster_itr))) {
-		uint32_t asset_id = ASSET_CPU;
-		slurmdb_asset_rec_t *cluster_cpu_asset_rec,
-			*cluster_energy_asset_rec;
+		uint32_t tres_id = TRES_CPU;
+		slurmdb_tres_rec_t *cluster_cpu_tres_rec,
+			*cluster_energy_tres_rec;
 
-		if (!(cluster_cpu_asset_rec = list_find_first(
-			      slurmdb_report_cluster->assets,
-			      slurmdb_find_asset_in_list,
-			      &asset_id))) {
-			info("error, no cpu(%d) asset!", asset_id);
+		if (!(cluster_cpu_tres_rec = list_find_first(
+			      slurmdb_report_cluster->tres,
+			      slurmdb_find_tres_in_list,
+			      &tres_id))) {
+			info("error, no cpu(%d) tres!", tres_id);
 			continue;
 		}
 
-		asset_id = ASSET_ENERGY;
-		if (!(cluster_energy_asset_rec = list_find_first(
-			      slurmdb_report_cluster->assets,
-			      slurmdb_find_asset_in_list,
-			      &asset_id))) {
-			info("error, no energy(%d) asset!", asset_id);
+		tres_id = TRES_ENERGY;
+		if (!(cluster_energy_tres_rec = list_find_first(
+			      slurmdb_report_cluster->tres,
+			      slurmdb_find_tres_in_list,
+			      &tres_id))) {
+			info("error, no energy(%d) tres!", tres_id);
 			continue;
 		}
 
@@ -926,30 +926,30 @@ extern int cluster_user_by_account(int argc, char *argv[])
 
 		itr = list_iterator_create(slurmdb_report_cluster->user_list);
 		while((slurmdb_report_user = list_next(itr))) {
-			slurmdb_asset_rec_t *cpu_asset_rec, *energy_asset_rec;
+			slurmdb_tres_rec_t *cpu_tres_rec, *energy_tres_rec;
 			int curr_inx = 1;
 
-			asset_id = ASSET_CPU;
+			tres_id = TRES_CPU;
 
-			if (!(cpu_asset_rec = list_find_first(
-				      slurmdb_report_user->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no cpu(%d) asset!", asset_id);
+			if (!(cpu_tres_rec = list_find_first(
+				      slurmdb_report_user->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no cpu(%d) tres!", tres_id);
 				continue;
 			}
 
 			/* we don't care if they didn't use any time */
-			if (!cpu_asset_rec->alloc_secs)
+			if (!cpu_tres_rec->alloc_secs)
 				continue;
 
-			asset_id = ASSET_ENERGY;
+			tres_id = TRES_ENERGY;
 
-			if (!(energy_asset_rec = list_find_first(
-				      slurmdb_report_user->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no energy(%d) asset!", asset_id);
+			if (!(energy_tres_rec = list_find_first(
+				      slurmdb_report_user->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no energy(%d) tres!", tres_id);
 				continue;
 			}
 
@@ -994,16 +994,16 @@ extern int cluster_user_by_account(int argc, char *argv[])
 				case PRINT_CLUSTER_AMOUNT_USED:
 					field->print_routine(
 						field,
-						cpu_asset_rec->alloc_secs,
-						cluster_cpu_asset_rec->
+						cpu_tres_rec->alloc_secs,
+						cluster_cpu_tres_rec->
 						alloc_secs,
 						(curr_inx == field_count));
 					break;
                                 case PRINT_CLUSTER_ENERGY:
                                         field->print_routine(
                                                 field,
-                                                energy_asset_rec->alloc_secs,
-						cluster_energy_asset_rec->
+                                                energy_tres_rec->alloc_secs,
+						cluster_energy_tres_rec->
 						alloc_secs,
                                                 (curr_inx == field_count));
                                         break;
@@ -1106,23 +1106,23 @@ extern int cluster_user_by_wckey(int argc, char *argv[])
 	field_count = list_count(print_fields_list);
 	cluster_itr = list_iterator_create(slurmdb_report_cluster_list);
 	while((slurmdb_report_cluster = list_next(cluster_itr))) {
-		uint32_t asset_id = ASSET_CPU;
-		slurmdb_asset_rec_t *cluster_cpu_asset_rec,
-			*cluster_energy_asset_rec;
+		uint32_t tres_id = TRES_CPU;
+		slurmdb_tres_rec_t *cluster_cpu_tres_rec,
+			*cluster_energy_tres_rec;
 
-		if (!(cluster_cpu_asset_rec = list_find_first(
-			      slurmdb_report_cluster->assets,
-			      slurmdb_find_asset_in_list,
-			      &asset_id))) {
-			info("error, no cpu(%d) asset!", asset_id);
+		if (!(cluster_cpu_tres_rec = list_find_first(
+			      slurmdb_report_cluster->tres,
+			      slurmdb_find_tres_in_list,
+			      &tres_id))) {
+			info("error, no cpu(%d) tres!", tres_id);
 			continue;
 		}
 
-		if (!(cluster_energy_asset_rec = list_find_first(
-			      slurmdb_report_cluster->assets,
-			      slurmdb_find_asset_in_list,
-			      &asset_id))) {
-			info("error, no energy(%d) asset!", asset_id);
+		if (!(cluster_energy_tres_rec = list_find_first(
+			      slurmdb_report_cluster->tres,
+			      slurmdb_find_tres_in_list,
+			      &tres_id))) {
+			info("error, no energy(%d) tres!", tres_id);
 			continue;
 		}
 
@@ -1131,30 +1131,30 @@ extern int cluster_user_by_wckey(int argc, char *argv[])
 
 		itr = list_iterator_create(slurmdb_report_cluster->user_list);
 		while ((slurmdb_report_user = list_next(itr))) {
-			slurmdb_asset_rec_t *cpu_asset_rec, *energy_asset_rec;
+			slurmdb_tres_rec_t *cpu_tres_rec, *energy_tres_rec;
 			int curr_inx = 1;
 
-			asset_id = ASSET_CPU;
+			tres_id = TRES_CPU;
 
-			if (!(cpu_asset_rec = list_find_first(
-				      slurmdb_report_user->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no cpu(%d) asset!", asset_id);
+			if (!(cpu_tres_rec = list_find_first(
+				      slurmdb_report_user->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no cpu(%d) tres!", tres_id);
 				continue;
 			}
 
 			/* we don't care if they didn't use any time */
-			if (!cpu_asset_rec->alloc_secs)
+			if (!cpu_tres_rec->alloc_secs)
 				continue;
 
-			asset_id = ASSET_ENERGY;
+			tres_id = TRES_ENERGY;
 
-			if (!(energy_asset_rec = list_find_first(
-				      slurmdb_report_user->assets,
-				      slurmdb_find_asset_in_list,
-				      &asset_id))) {
-				info("error, no energy(%d) asset!", asset_id);
+			if (!(energy_tres_rec = list_find_first(
+				      slurmdb_report_user->tres,
+				      slurmdb_find_tres_in_list,
+				      &tres_id))) {
+				info("error, no energy(%d) tres!", tres_id);
 				continue;
 			}
 
@@ -1199,16 +1199,16 @@ extern int cluster_user_by_wckey(int argc, char *argv[])
 				case PRINT_CLUSTER_AMOUNT_USED:
 					field->print_routine(
 						field,
-						cpu_asset_rec->alloc_secs,
-						cluster_cpu_asset_rec->
+						cpu_tres_rec->alloc_secs,
+						cluster_cpu_tres_rec->
 						alloc_secs,
 						(curr_inx == field_count));
 					break;
                                 case PRINT_CLUSTER_ENERGY:
                                         field->print_routine(
                                                 field,
-                                                energy_asset_rec->alloc_secs,
-                                                cluster_energy_asset_rec->
+                                                energy_tres_rec->alloc_secs,
+                                                cluster_energy_tres_rec->
 						alloc_secs,
                                                 (curr_inx == field_count));
                                         break;
@@ -1283,11 +1283,11 @@ extern int cluster_utilization(int argc, char *argv[])
 	while ((cluster = list_next(itr))) {
 		slurmdb_cluster_accounting_rec_t *accting = NULL;
 		slurmdb_cluster_accounting_rec_t *total_acct;
-		List total_asset_acct;
+		List total_tres_acct;
 		uint64_t total_reported = 0;
 		uint64_t local_total_time = 0;
 		int curr_inx = 1;
-		uint32_t cpu_asset = ASSET_CPU;
+		uint32_t cpu_tres = TRES_CPU;
 
 		if (!cluster->accounting_list
 		   || !list_count(cluster->accounting_list))
@@ -1296,26 +1296,26 @@ extern int cluster_utilization(int argc, char *argv[])
 		itr3 = list_iterator_create(cluster->accounting_list);
 		while ((accting = list_next(itr3)))
 			slurmdb_sum_accounting_list(
-				accting, &total_asset_acct);
+				accting, &total_tres_acct);
 		list_iterator_destroy(itr3);
 
-		itr3 = list_iterator_create(total_asset_acct);
+		itr3 = list_iterator_create(total_tres_acct);
 		while ((accting = list_next(itr3)))
-			accting->asset_rec.count /=
-				accting->asset_rec.rec_count;
+			accting->tres_rec.count /=
+				accting->tres_rec.rec_count;
 		list_iterator_destroy(itr3);
 
-		/* FIXME: Right now this only reports CPU assets */
+		/* FIXME: Right now this only reports CPU tres */
 		if (!(total_acct = list_find_first(
-			      total_asset_acct,
-			      slurmdb_find_cluster_accting_asset_in_list,
-			      &cpu_asset))) {
-			info("error, no cpu(%d) asset!", cpu_asset);
+			      total_tres_acct,
+			      slurmdb_find_cluster_accting_tres_in_list,
+			      &cpu_tres))) {
+			info("error, no cpu(%d) tres!", cpu_tres);
 			continue;
 		}
 
 		local_total_time = (uint64_t)total_time *
-			(uint64_t)total_acct->asset_rec.count;
+			(uint64_t)total_acct->tres_rec.count;
 		total_reported = total_acct->alloc_secs + total_acct->down_secs
 			+ total_acct->pdown_secs + total_acct->idle_secs
 			+ total_acct->resv_secs;
@@ -1331,7 +1331,7 @@ extern int cluster_utilization(int argc, char *argv[])
 			case PRINT_CLUSTER_CPUS:
 				field->print_routine(field,
 						     total_acct->
-						     asset_rec.count,
+						     tres_rec.count,
 						     (curr_inx ==
 						      field_count));
 				break;
@@ -1380,7 +1380,7 @@ extern int cluster_utilization(int argc, char *argv[])
 			case PRINT_CLUSTER_ENERGY:
 				/* FIXME: This needs to be done
 				   differently since it is a
-				   different asset */
+				   different tres */
 				/* field->print_routine(field, */
 				/*                      total_acct->consumed_energy, */
 				/*                      (curr_inx == */
@@ -1494,8 +1494,8 @@ extern int cluster_wckey_by_user(int argc, char *argv[])
 
 	cluster_itr = list_iterator_create(slurmdb_report_cluster_list);
 	while ((slurmdb_report_cluster = list_next(cluster_itr))) {
-		uint32_t cpu_asset = ASSET_CPU;
-		slurmdb_asset_rec_t *cpu_asset_rec, *cluster_asset_rec;
+		uint32_t cpu_tres = TRES_CPU;
+		slurmdb_tres_rec_t *cpu_tres_rec, *cluster_tres_rec;
 		//list_sort(slurmdb_report_cluster->wckey_list,
 		//  (ListCmpF)sort_wckey_dec);
 		if (tree_list)
@@ -1504,36 +1504,36 @@ extern int cluster_wckey_by_user(int argc, char *argv[])
 			tree_list = list_create(slurmdb_destroy_print_tree);
 
 		itr = list_iterator_create(slurmdb_report_cluster->assoc_list);
-		if (!slurmdb_report_cluster->assets ||
-		    !list_count(slurmdb_report_cluster->assets)) {
-			error("No assets given for cluster %s",
+		if (!slurmdb_report_cluster->tres ||
+		    !list_count(slurmdb_report_cluster->tres)) {
+			error("No tres given for cluster %s",
 			      slurmdb_report_cluster->name);
 			continue;
 		}
 
-		/* FIXME: Right now this only reports CPU assets */
-		if (!(cluster_asset_rec = list_find_first(
-			      slurmdb_report_cluster->assets,
-			      slurmdb_find_asset_in_list,
-			      &cpu_asset))) {
-			info("error, no cpu(%d) asset!", cpu_asset);
+		/* FIXME: Right now this only reports CPU tres */
+		if (!(cluster_tres_rec = list_find_first(
+			      slurmdb_report_cluster->tres,
+			      slurmdb_find_tres_in_list,
+			      &cpu_tres))) {
+			info("error, no cpu(%d) tres!", cpu_tres);
 			continue;
 		}
 
 		while ((slurmdb_report_assoc = list_next(itr))) {
 			int curr_inx = 1;
 
-			cpu_asset = ASSET_CPU;
+			cpu_tres = TRES_CPU;
 
-			if (!(cpu_asset_rec = list_find_first(
-				      slurmdb_report_assoc->assets,
-				      slurmdb_find_asset_in_list,
-				      &cpu_asset))) {
-				info("error, no cpu(%d) asset!", cpu_asset);
+			if (!(cpu_tres_rec = list_find_first(
+				      slurmdb_report_assoc->tres,
+				      slurmdb_find_tres_in_list,
+				      &cpu_tres))) {
+				info("error, no cpu(%d) tres!", cpu_tres);
 				continue;
 			}
 
-			if (!cpu_asset_rec->alloc_secs)
+			if (!cpu_tres_rec->alloc_secs)
 				continue;
 
 			while((field = list_next(itr2))) {
@@ -1580,8 +1580,8 @@ extern int cluster_wckey_by_user(int argc, char *argv[])
 				case PRINT_CLUSTER_AMOUNT_USED:
 					field->print_routine(
 						field,
-						cpu_asset_rec->alloc_secs,
-						cluster_asset_rec->alloc_secs,
+						cpu_tres_rec->alloc_secs,
+						cluster_tres_rec->alloc_secs,
 						(curr_inx == field_count));
 					break;
 				default:

@@ -450,11 +450,11 @@ extern uint16_t slurm_get_vsize_factor(void);
  */
 char *slurm_get_accounting_storage_type(void);
 
-/* slurm_get_accounting_storage_assets
- * returns the accounting storage assets from slurmctld_conf object
- * RET char *    - accounting storage assets,  MUST be xfreed by caller
+/* slurm_get_accounting_storage_tres
+ * returns the accounting storage tres from slurmctld_conf object
+ * RET char *    - accounting storage tres,  MUST be xfreed by caller
  */
-char *slurm_get_accounting_storage_assets(void);
+char *slurm_get_accounting_storage_tres(void);
 
 /* slurm_get_accounting_storage_user
  * returns the storage user from slurmctld_conf object

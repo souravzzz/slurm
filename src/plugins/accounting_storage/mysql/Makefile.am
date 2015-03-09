@@ -8,7 +8,7 @@ AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/common
 
 AS_MYSQL_SOURCES = accounting_storage_mysql.c accounting_storage_mysql.h \
 		as_mysql_acct.c as_mysql_acct.h \
-		as_mysql_asset.c as_mysql_asset.h \
+		as_mysql_tres.c as_mysql_tres.h \
 		as_mysql_archive.c as_mysql_archive.h \
 		as_mysql_assoc.c as_mysql_assoc.h \
 		as_mysql_cluster.c as_mysql_cluster.h \

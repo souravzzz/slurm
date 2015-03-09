@@ -297,15 +297,15 @@ void print_fields(type_t type, void *object)
 					     tmp_char,
 					     (curr_inx == field_count));
 			break;
-		case PRINT_ASSETS:
+		case PRINT_TRES:
 			switch(type) {
 			case JOB:
-				tmp_char = slurmdb_make_asset_string(
-					job->assets);
+				tmp_char = slurmdb_make_tres_string(
+					job->tres);
 				break;
 			case JOBSTEP:
-				tmp_char = slurmdb_make_asset_string(
-					step->job_ptr->assets);
+				tmp_char = slurmdb_make_tres_string(
+					step->job_ptr->tres);
 				break;
 			case JOBCOMP:
 			default:

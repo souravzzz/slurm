@@ -195,11 +195,11 @@ static print_field_t *_get_print_field(char *object)
 		field->name = xstrdup("% Allowed");
 		field->len = 10;
 		field->print_routine = print_fields_uint16;
-	} else if (!strncasecmp("Assets", object, MAX(command_len, 2)) ||
+	} else if (!strncasecmp("TRES", object, MAX(command_len, 2)) ||
 		   !strncasecmp("CPUCount", object, MAX(command_len, 2))) {
-		/* Assets used to be named cpucount */
-		field->type = PRINT_ASSETS;
-		field->name = xstrdup("Assets");
+		/* TRES used to be named cpucount */
+		field->type = PRINT_TRES;
+		field->name = xstrdup("TRES");
 		field->len = 20;
 		field->print_routine = print_fields_str;
 	} else if (!strncasecmp("Classification", object,

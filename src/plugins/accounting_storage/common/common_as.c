@@ -181,9 +181,9 @@ extern int addto_update_list(List update_list, slurmdb_update_type_t type,
 	case SLURMDB_REMOVE_COORD:
 		update_object->objects = list_create(slurmdb_destroy_user_rec);
 		break;
-	case SLURMDB_ADD_ASSET:
-		xassert(((slurmdb_asset_rec_t *)object)->id);
-		update_object->objects = list_create(slurmdb_destroy_asset_rec);
+	case SLURMDB_ADD_TRES:
+		xassert(((slurmdb_tres_rec_t *)object)->id);
+		update_object->objects = list_create(slurmdb_destroy_tres_rec);
 		break;
 	case SLURMDB_ADD_ASSOC:
 		/* We are going to send these to the slurmctld's so
@@ -328,8 +328,8 @@ extern void dump_update_list(List update_list)
 		case SLURMDB_REMOVE_COORD:
 			debug3("\tUSER RECORDS");
 			break;
-		case SLURMDB_ADD_ASSET:
-			debug3("\tASSET RECORDS");
+		case SLURMDB_ADD_TRES:
+			debug3("\tTRES RECORDS");
 			break;
 		case SLURMDB_ADD_ASSOC:
 		case SLURMDB_MODIFY_ASSOC:

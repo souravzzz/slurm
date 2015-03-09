@@ -110,13 +110,13 @@ extern void slurmdb_pack_archive_rec(void *in,
 				     uint16_t rpc_version, Buf buffer);
 extern int slurmdb_unpack_archive_rec(void **object, uint16_t rpc_version,
 				      Buf buffer);
-extern void slurmdb_pack_asset_cond(void *in, uint16_t rpc_version, Buf buffer);
-extern int slurmdb_unpack_asset_cond(void **object, uint16_t rpc_version,
+extern void slurmdb_pack_tres_cond(void *in, uint16_t rpc_version, Buf buffer);
+extern int slurmdb_unpack_tres_cond(void **object, uint16_t rpc_version,
 				     Buf buffer);
-extern void slurmdb_pack_asset_rec(void *in, uint16_t rpc_version, Buf buffer);
-extern int slurmdb_unpack_asset_rec_noalloc(
-	slurmdb_asset_rec_t *object_ptr, uint16_t rpc_version, Buf buffer);
-extern int slurmdb_unpack_asset_rec(void **object, uint16_t rpc_version,
+extern void slurmdb_pack_tres_rec(void *in, uint16_t rpc_version, Buf buffer);
+extern int slurmdb_unpack_tres_rec_noalloc(
+	slurmdb_tres_rec_t *object_ptr, uint16_t rpc_version, Buf buffer);
+extern int slurmdb_unpack_tres_rec(void **object, uint16_t rpc_version,
 				    Buf buffer);
 
 extern void slurmdb_pack_user_cond(void *in,

@@ -1226,23 +1226,23 @@ char *slurm_get_accounting_storage_type(void)
 
 }
 
-/* slurm_get_accounting_storage_assets
- * returns the accounting storage assets from slurmctld_conf object
- * RET char *    - accounting storage assets,  MUST be xfreed by caller
+/* slurm_get_accounting_storage_tres
+ * returns the accounting storage tres from slurmctld_conf object
+ * RET char *    - accounting storage tres,  MUST be xfreed by caller
  */
-char *slurm_get_accounting_storage_assets(void)
+char *slurm_get_accounting_storage_tres(void)
 {
-	char *accounting_assets;
+	char *accounting_tres;
 	slurm_ctl_conf_t *conf;
 
 	if (slurmdbd_conf) {
-		accounting_assets = NULL;
+		accounting_tres = NULL;
 	} else {
 		conf = slurm_conf_lock();
-		accounting_assets = xstrdup(conf->accounting_storage_assets);
+		accounting_tres = xstrdup(conf->accounting_storage_tres);
 		slurm_conf_unlock();
 	}
-	return accounting_assets;
+	return accounting_tres;
 
 }
 
