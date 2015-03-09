@@ -1368,6 +1368,9 @@ extern int as_mysql_cluster_assets(mysql_conn_t *mysql_conn,
 	}
 
 	if (*assets) {
+		/* FIXME: if you remove an asset, there isn't any code
+		 * to remove it from the mix yet.
+		 */
 		itr = list_iterator_create(*assets);
 		while ((asset_rec = list_next(itr))) {
 			if (!asset_rec->id)
