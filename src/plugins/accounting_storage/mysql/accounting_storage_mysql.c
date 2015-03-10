@@ -984,14 +984,14 @@ extern int create_cluster_ext_tables(mysql_conn_t *mysql_conn,
 	storage_field_t event_ext_table_fields[] = {
 		{ "inx", "int unsigned not null" },
 		{ "id_tres", "int not null" },
-		{ "count", "int unsigned not null" },
+		{ "count", "bigint unsigned not null" },
 		{ NULL, NULL}
 	};
 
 	storage_field_t job_ext_table_fields[] = {
-		{ "job_db_inx", "int not null" },
+		{ "job_db_inx", "int unsigned not null" },
 		{ "id_tres", "int not null" },
-		{ "count", "int unsigned  not null" },
+		{ "count", "bigint unsigned not null" },
 		{ NULL, NULL}
 	};
 
@@ -1070,7 +1070,7 @@ extern int create_cluster_tables(mysql_conn_t *mysql_conn, char *cluster_name)
 		{ "deleted", "tinyint default 0 not null" },
 		{ "id_tres", "int not null" },
 		{ "time_start", "int unsigned not null" },
-		{ "count", "int unsigned default 0 not null" },
+		{ "count", "bigint unsigned default 0 not null" },
 		{ "alloc_secs", "bigint unsigned default 0 not null" },
 		{ "down_secs", "bigint unsigned default 0 not null" },
 		{ "pdown_secs", "bigint unsigned default 0 not null" },
@@ -1171,7 +1171,7 @@ extern int create_cluster_tables(mysql_conn_t *mysql_conn, char *cluster_name)
 	};
 
 	storage_field_t step_table_fields[] = {
-		{ "job_db_inx", "int not null" },
+		{ "job_db_inx", "int unsigned not null" },
 		{ "deleted", "tinyint default 0 not null" },
 		{ "cpus_alloc", "int unsigned not null" },
 		{ "exit_code", "int default 0 not null" },
@@ -1224,7 +1224,7 @@ extern int create_cluster_tables(mysql_conn_t *mysql_conn, char *cluster_name)
 	};
 
 	storage_field_t suspend_table_fields[] = {
-		{ "job_db_inx", "int not null" },
+		{ "job_db_inx", "int unsigned not null" },
 		{ "id_assoc", "int not null" },
 		{ "time_start", "int unsigned default 0 not null" },
 		{ "time_end", "int unsigned default 0 not null" },
