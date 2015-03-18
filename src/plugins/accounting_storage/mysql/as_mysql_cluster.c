@@ -1351,7 +1351,7 @@ extern int as_mysql_cluster_tres(mysql_conn_t *mysql_conn,
 	MYSQL_ROW row;
 	slurmdb_tres_rec_t *tres_rec, *loc_tres_rec;
 	ListIterator itr;
-	char *tres_query = NULL, *tres_values = NULL;
+	char *tres_values = NULL;
 	int i;
 	bool update = false;
 	assoc_mgr_lock_t locks = { READ_LOCK, NO_LOCK, NO_LOCK,
@@ -1367,47 +1367,16 @@ extern int as_mysql_cluster_tres(mysql_conn_t *mysql_conn,
 		return SLURM_ERROR;
 	}
 
-	if (*tres) {
-		/* FIXME: if you remove an tres, there isn't any code
-		 * to remove it from the mix yet.
-		 */
-		itr = list_iterator_create(*tres);
-		while ((tres_rec = list_next(itr))) {
-			if (!tres_rec->id)
-				continue;
-			xstrfmtcat(tres_query, ", ext_%u", tres_rec->id);
-			if (!tres_values)
-				xstrfmtcat(tres_values,
-					   "insert into \"%s_%s\" "
-					   "(inx, id_tres, count) values "
-					   "(LAST_INSERT_ID(), %u, %"PRIu64")",
-					   mysql_conn->cluster_name,
-					   event_ext_table,
-					   tres_rec->id, tres_rec->count);
-			else
-				xstrfmtcat(tres_values,
-					   ", (LAST_INSERT_ID(), "
-					   "%u, %"PRIu64")",
-					   tres_rec->id, tres_rec->count);
-		}
-		list_iterator_destroy(itr);
-	} else {
-		assoc_mgr_lock(&locks);
-		tres_query = xstrdup(full_tres_query);
-	}
+	assoc_mgr_lock(&locks);
 
 	/* Record the processor count */
 	query = xstrdup_printf(
 		"select cluster_nodes%s from \"%s_%s\" where "
 		"time_end=0 and node_name='' and state=0 limit 1",
-		tres_query,
+		full_tres_query,
 		mysql_conn->cluster_name, event_view);
 	if (!(result = mysql_db_query_ret(mysql_conn, query, 0))) {
-		if (!*tres)
-			assoc_mgr_unlock(&locks);
-
-		xfree(tres_query);
-		xfree(tres_values);
+		assoc_mgr_unlock(&locks);
 		xfree(query);
 		if (mysql_errno(mysql_conn->db_conn) == ER_NO_SUCH_TABLE)
 			rc = ESLURM_ACCESS_DENIED;
@@ -1416,6 +1385,31 @@ extern int as_mysql_cluster_tres(mysql_conn_t *mysql_conn,
 		return rc;
 	}
 	xfree(query);
+
+	if (*tres) {
+		itr = list_iterator_create(*tres);
+		while ((tres_rec = list_next(itr))) {
+			if (!tres_rec->id)
+				continue;
+
+			if (tres_values)
+				xstrfmtcat(tres_values,
+					   ", (LAST_INSERT_ID(), "
+					   "%u, %"PRIu64")",
+					   tres_rec->id,
+					   tres_rec->count);
+			else
+				xstrfmtcat(tres_values,
+					   "insert into \"%s_%s\" "
+					   "(inx, id_tres, count) values "
+					   "(LAST_INSERT_ID(), %u, %"PRIu64")",
+					   mysql_conn->cluster_name,
+					   event_ext_table,
+					   tres_rec->id,
+					   tres_rec->count);
+		}
+		list_iterator_destroy(itr);
+	}
 
 	/* we only are checking the first one here */
 	if (!(row = mysql_fetch_row(result))) {
@@ -1445,8 +1439,6 @@ extern int as_mysql_cluster_tres(mysql_conn_t *mysql_conn,
 
 	/* If tres is NULL we want to return the tres for this cluster */
 	if (!*tres) {
-		xfree(tres_query);
-		xfree(tres_values);
 		*tres = list_create(slurmdb_destroy_tres_rec);
 		itr = list_iterator_create(assoc_mgr_tres_list);
 		while ((tres_rec = list_next(itr))) {
@@ -1458,41 +1450,29 @@ extern int as_mysql_cluster_tres(mysql_conn_t *mysql_conn,
 			loc_tres_rec = slurmdb_copy_tres_rec(tres_rec);
 			loc_tres_rec->count = slurm_atoull(row[i]);
 			list_append(*tres, loc_tres_rec);
-			xstrfmtcat(tres_query, ", ext_%u", loc_tres_rec->id);
-			if (!tres_values)
-				xstrfmtcat(tres_values,
-					   "insert into \"%s_%s\" "
-					   "(inx, id_tres, count) values "
-					   "(LAST_INSERT_ID(), %u, %"PRIu64")",
-					   mysql_conn->cluster_name,
-					   event_ext_table,
-					   loc_tres_rec->id,
-					   loc_tres_rec->count);
-			else
-				xstrfmtcat(tres_values,
-					   ", (LAST_INSERT_ID(), "
-					   "%u, %"PRIu64")",
-					   loc_tres_rec->id,
-					   loc_tres_rec->count);
 		}
 		list_iterator_destroy(itr);
-		/* end_it will only unlock this if !*tres, so do it
-		 * here instead.
-		 */
-		assoc_mgr_unlock(&locks);
 
 		goto end_it;
 	} else {
-		itr = list_iterator_create(*tres);
+		itr = list_iterator_create(assoc_mgr_tres_list);
 		while ((tres_rec = list_next(itr))) {
 			i++;
+			loc_tres_rec = list_find_first(
+				*tres, slurmdb_find_tres_in_list,
+				&tres_rec->id);
 
-			if (!row[i]) { /* first time around */
+			if ((row[i] && !loc_tres_rec) ||
+			    (!row[i] && loc_tres_rec)) { /* change in
+							 * tracking or
+							 * first time around
+							 */
 				update = 1;
 				continue;
-			}
+			} else if (!loc_tres_rec) /* not tracked */
+				continue;
 
-			if (slurm_atoull(row[i]) == tres_rec->count) {
+			if (slurm_atoull(row[i]) == loc_tres_rec->count) {
 				if (debug_flags & DEBUG_FLAG_DB_EVENT)
 					DB_DEBUG(mysql_conn->conn,
 						 "we have the same count as "
@@ -1505,9 +1485,10 @@ extern int as_mysql_cluster_tres(mysql_conn_t *mysql_conn,
 				debug("%s has changed tres %d "
 				      "from %s to %"PRIu64"",
 				      mysql_conn->cluster_name, tres_rec->id,
-				      row[i], tres_rec->count);
+				      row[i], loc_tres_rec->count);
 				update = 1;
 			}
+
 		}
 		list_iterator_destroy(itr);
 	}
@@ -1569,10 +1550,8 @@ update_it:
 	rc = mysql_db_query(mysql_conn, query);
 	xfree(query);
 end_it:
-	if (!*tres)
-		assoc_mgr_unlock(&locks);
+	assoc_mgr_unlock(&locks);
 
-	xfree(tres_query);
 	xfree(tres_values);
 	mysql_free_result(result);
 	if (first && rc == SLURM_SUCCESS)
