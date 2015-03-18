@@ -139,6 +139,7 @@ static void _partial_free_dbd_job_start(void *object)
 		xfree(req->gres_alloc);
 		xfree(req->gres_req);
 		xfree(req->gres_used);
+		FREE_NULL_LIST(req->tres);
 	}
 }
 

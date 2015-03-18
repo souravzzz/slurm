@@ -125,6 +125,7 @@ extern char *slurmdb_get_selected_step_id(
 	slurmdb_selected_step_t *selected_step);
 
 extern slurmdb_tres_rec_t *slurmdb_copy_tres_rec(slurmdb_tres_rec_t *tres);
+extern List slurmdb_copy_tres_list(List tres);
 extern char *slurmdb_make_tres_string(List tres);
 extern int slurmdb_find_tres_in_list(void *x, void *key);
 extern int slurmdb_find_cluster_accting_tres_in_list(void *x, void *key);

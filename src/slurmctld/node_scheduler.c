@@ -1569,6 +1569,7 @@ extern int select_nodes(struct job_record *job_ptr, bool test_only,
 	slurmdb_qos_rec_t *qos_ptr = NULL;
 	slurmdb_assoc_rec_t *assoc_ptr = NULL;
 	uint32_t selected_node_cnt = NO_VAL;
+	slurmdb_tres_rec_t *tres_rec;
 
 	xassert(job_ptr);
 	xassert(job_ptr->magic == JOB_MAGIC);
@@ -1816,6 +1817,20 @@ extern int select_nodes(struct job_record *job_ptr, bool test_only,
 	job_ptr->exit_code = 0;
 
 	job_ptr->node_bitmap = select_bitmap;
+
+
+	if (!job_ptr->tres)
+		job_ptr->tres = list_create(slurmdb_destroy_tres_rec);
+
+	tres_rec = xmalloc(sizeof(slurmdb_tres_rec_t));
+	tres_rec->id = TRES_CPU;
+	tres_rec->count = (uint64_t)job_ptr->total_cpus;
+	list_append(job_ptr->tres, tres_rec);
+
+	tres_rec = xmalloc(sizeof(slurmdb_tres_rec_t));
+	tres_rec->id = TRES_MEM;
+	tres_rec->count = (uint64_t)job_ptr->details->pn_min_memory;
+	list_append(job_ptr->tres, tres_rec);
 
 	/* we need to have these times set to know when the endtime
 	 * is for the job when we place it

@@ -2812,6 +2812,26 @@ extern slurmdb_tres_rec_t *slurmdb_copy_tres_rec(slurmdb_tres_rec_t *tres)
 	memcpy(tres_out, tres, sizeof(slurmdb_tres_rec_t));
 	tres_out->name = xstrdup(tres->name);
 	tres_out->type = xstrdup(tres->type);
+	tres_out->count = tres->count;
+
+	return tres_out;
+}
+
+extern List slurmdb_copy_tres_list(List tres)
+{
+	slurmdb_tres_rec_t *tres_rec = NULL;
+	ListIterator itr;
+	List tres_out;
+
+	if (!tres)
+		return NULL;
+
+	tres_out = list_create(slurmdb_destroy_tres_rec);
+
+	itr = list_iterator_create(tres);
+	while ((tres_rec = list_next(itr)))
+		list_append(tres_out, slurmdb_copy_tres_rec(tres_rec));
+	list_iterator_destroy(itr);
 
 	return tres_out;
 }

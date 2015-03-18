@@ -97,6 +97,21 @@ extern void license_free_rec(void *x)
 	}
 }
 
+/* Find a slurmdb_tres_rec that is a license of a certain name */
+static int _license_find_tres(void *x, void *key)
+{
+	slurmdb_tres_rec_t *tres_rec = (slurmdb_tres_rec_t *)x;
+
+	if (!tres_rec->type || strcmp(tres_rec->type, "license"))
+		return 0;
+
+	if (key && tres_rec->name && !strcmp(tres_rec->name, (char *)key))
+		return 1;
+
+	return 0;
+
+}
+
 /* Find a license_t record by license name (for use by list_find_first) */
 static int _license_find_rec(void *x, void *key)
 {
@@ -812,16 +827,6 @@ get_all_license_info(char **buffer_ptr,
 	buffer_ptr[0] = xfer_buf_data(buffer);
 }
 
-static int _gres_find_lic_by_name(void *x, void *key)
-{
-	licenses_t *lic = (licenses_t *)x;
-
-	if (!strcmp(lic->name, (char *)key))
-		return 1;
-
-	return 0;
-}
-
 extern uint32_t get_total_license_cnt(char *name)
 {
 	uint32_t count = 0;
@@ -830,7 +835,7 @@ extern uint32_t get_total_license_cnt(char *name)
 	slurm_mutex_lock(&license_mutex);
 	if (license_list) {
 		lic = list_find_first(
-			license_list, _gres_find_lic_by_name, name);
+			license_list, _license_find_rec, name);
 
 		if (lic)
 			count = lic->total;
@@ -839,6 +844,73 @@ extern uint32_t get_total_license_cnt(char *name)
 
 	return count;
 }
+
+/* node_read should be locked before coming in here
+ * returns 1 if change happened.
+ */
+extern int licenses_2_tres_list(struct job_record *job_ptr, bool update_acct)
+{
+	ListIterator itr;
+	slurmdb_tres_rec_t *tres_rec, *tres_loc_rec;
+	licenses_t *license_entry;
+	int changed = 0;
+
+	xassert(job_ptr);
+
+	/* no licenses */
+	if (!job_ptr->license_list || !list_count(job_ptr->license_list))
+		return changed;
+
+	if (!job_ptr->tres)
+		job_ptr->tres = list_create(slurmdb_destroy_tres_rec);
+	else {
+		itr = list_iterator_create(job_ptr->tres);
+		while ((tres_rec = list_next(itr))) {
+			if (strcmp(tres_rec->type, "license"))
+				continue;
+
+			if (!(license_entry = list_find_first(
+				      job_ptr->license_list, _license_find_rec,
+				      tres_rec->name))) {
+				/* info("removing %s %s", tres_rec->type, */
+				/*      tres_rec->name); */
+				list_delete_item(itr);
+				changed++;
+				continue; /* not tracked */
+			} else if (tres_rec->count != license_entry->total) {
+				tres_rec->count = license_entry->total;
+				changed++;
+				continue; /* changed count */
+			}
+		}
+		list_iterator_destroy(itr);
+	}
+
+	itr = list_iterator_create(job_ptr->license_list);
+	while ((license_entry = list_next(itr))) {
+		if (!(tres_rec = list_find_first(tres_list, _license_find_tres,
+						 license_entry->name)))
+			continue; /* not tracked */
+
+		if ((tres_loc_rec = list_find_first(
+			      job_ptr->tres, slurmdb_find_tres_in_list,
+			      &tres_rec->id)))
+			continue; /* already handled */
+
+		/* New license */
+		tres_loc_rec = slurmdb_copy_tres_rec(tres_rec);
+		tres_loc_rec->count = license_entry->total;
+
+		list_append(job_ptr->tres, tres_loc_rec);
+		//info("adding %s", tres_loc_rec->name);
+		changed++;
+	}
+	list_iterator_destroy(itr);
+
+	/* FIXME: handle updating accounting here if needed */
+	return changed;
+}
+
 
 /* pack_license()
  *

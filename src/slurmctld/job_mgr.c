@@ -2123,6 +2123,7 @@ unpack_error:
 	xfree(spank_job_env);
 	xfree(state_desc);
 	xfree(task_id_str);
+	FREE_NULL_LIST(tres);
 	xfree(wckey);
 	select_g_select_jobinfo_free(select_jobinfo);
 	checkpoint_free_jobinfo(check_job);
@@ -3647,6 +3648,7 @@ extern struct job_record *job_array_split(struct job_record *job_ptr)
 		}
 	}
 	job_ptr_pend->state_desc = xstrdup(job_ptr->state_desc);
+	job_ptr_pend->tres = slurmdb_copy_tres_list(job_ptr->tres);
 	job_ptr_pend->wckey = xstrdup(job_ptr->wckey);
 
 	job_details = job_ptr->details;
@@ -5666,6 +5668,7 @@ static int _job_create(job_desc_msg_t *job_desc, int allocate, int will_run,
 
 	job_ptr->license_list = license_list;
 	license_list = NULL;
+	licenses_2_tres_list(job_ptr, 0);
 
 	if (job_desc->req_switch != NO_VAL) {	/* Max # of switches */
 		job_ptr->req_switch = job_desc->req_switch;
@@ -7266,7 +7269,6 @@ static void _list_delete_job(void *job_entry)
 	}
 
 	delete_job_details(job_ptr);
-	FREE_NULL_LIST(job_ptr->tres);
 	xfree(job_ptr->account);
 	xfree(job_ptr->alias_list);
 	xfree(job_ptr->alloc_node);
@@ -7305,6 +7307,7 @@ static void _list_delete_job(void *job_entry)
 		xfree(job_ptr->spank_job_env[i]);
 	xfree(job_ptr->spank_job_env);
 	xfree(job_ptr->state_desc);
+	FREE_NULL_LIST(job_ptr->tres);
 	step_list_purge(job_ptr);
 	select_g_select_jobinfo_free(job_ptr->select_jobinfo);
 	xfree(job_ptr->wckey);
@@ -9008,6 +9011,9 @@ static void _merge_job_licenses(struct job_record *shrink_job_ptr,
 	xassert(shrink_job_ptr);
 	xassert(expand_job_ptr);
 
+	/* FIXME: do we really need to update accounting here?  It
+	 * might already happen */
+
 	if (!shrink_job_ptr->licenses)		/* No licenses to add */
 		return;
 
@@ -9017,6 +9023,7 @@ static void _merge_job_licenses(struct job_record *shrink_job_ptr,
 		FREE_NULL_LIST(expand_job_ptr->license_list);
 		expand_job_ptr->license_list = shrink_job_ptr->license_list;
 		shrink_job_ptr->license_list = NULL;
+		licenses_2_tres_list(expand_job_ptr, 1);
 		return;
 	}
 
@@ -9027,6 +9034,7 @@ static void _merge_job_licenses(struct job_record *shrink_job_ptr,
 	FREE_NULL_LIST(expand_job_ptr->license_list);
 	FREE_NULL_LIST(shrink_job_ptr->license_list);
 	license_job_merge(expand_job_ptr);
+	licenses_2_tres_list(expand_job_ptr, 1);
 	return;
 }
 
@@ -10490,6 +10498,9 @@ static int _update_job(struct job_record *job_ptr, job_desc_msg_t * job_specs,
 			error_code = ESLURM_JOB_NOT_PENDING_NOR_RUNNING;
 			FREE_NULL_LIST(license_list);
 		}
+
+		licenses_2_tres_list(job_ptr, 0);
+		update_accounting = 1;
 	}
 	if (error_code != SLURM_SUCCESS)
 		goto fini;
