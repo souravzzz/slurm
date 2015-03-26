@@ -1092,6 +1092,7 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 			time_t row_end = slurm_atoul(row[JOB_REQ_END]);
 			uint32_t row_rcpu = slurm_atoul(row[JOB_REQ_RCPU]);
 			slurmdb_tres_rec_t *tres_rec;
+			List loc_tres = NULL;
 			uint64_t row_energy = 0;
 			int loc_seconds = 0;
 			seconds = 0;
@@ -1170,8 +1171,9 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				a_usage->id = assoc_id;
 				list_append(assoc_usage_list, a_usage);
 				last_id = assoc_id;
-				a_usage->loc_tres = list_create(
-					_destroy_local_tres_usage);
+				/* a_usage->loc_tres is made later,
+				   don't do it here.
+				*/
 			}
 
 			/* Short circuit this so so we don't get a pointer. */
@@ -1197,6 +1199,19 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				last_wckeyid = wckey_id;
 			}
 
+			/* do the cluster allocated calculation */
+		calc_cluster:
+
+			if (!a_usage)
+				loc_tres = list_create(
+					_destroy_local_tres_usage);
+			else {
+				if (!a_usage->loc_tres)
+					a_usage->loc_tres = list_create(
+						_destroy_local_tres_usage);
+				loc_tres = a_usage->loc_tres;
+			}
+
 			i = JOB_REQ_COUNT-1;
 			list_iterator_reset(itr2);
 			while ((tres_rec = list_next(itr2))) {
@@ -1209,7 +1224,7 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				if (!row[i] || !row[i][0])
 					continue;
 				time = slurm_atoul(row[i]) * seconds;
-				_add_time_tres(a_usage->loc_tres,
+				_add_time_tres(loc_tres,
 					       TIME_ALLOC, tres_rec->id,
 					       time);
 				if (w_usage)
@@ -1219,7 +1234,7 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 						       time);
 			}
 
-			_add_time_tres(a_usage->loc_tres,
+			_add_time_tres(loc_tres,
 				       TIME_ALLOC, TRES_ENERGY,
 				       row_energy);
 			if (w_usage)
@@ -1227,9 +1242,6 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 					w_usage->loc_tres,
 					TIME_ALLOC, TRES_ENERGY,
 					row_energy);
-
-			/* do the cluster allocated calculation */
-		calc_cluster:
 
 			/* Now figure out there was a disconnected
 			   slurmctld durning this job.
@@ -1253,14 +1265,17 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				/*      cluster_name); */
 				_remove_job_tres_time_from_cluster(
 					loc_c_usage->loc_tres,
-					a_usage->loc_tres,
+					loc_tres,
 					loc_seconds);
 			}
 
 			/* first figure out the reservation */
 			if (resv_id) {
-				if (seconds <= 0)
+				if (seconds <= 0) {
+					if (!a_usage)
+						FREE_NULL_LIST(loc_tres);
 					continue;
+				}
 				/* Since we have already added the
 				   entire reservation as used time on
 				   the cluster we only need to
@@ -1299,20 +1314,21 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 
 					if (loc_seconds > 0) {
 						id = TRES_CPU;
-						local_tres_usage_t *loc_tres =
+						local_tres_usage_t *local_tres =
 							list_find_first(
-								a_usage->
 								loc_tres,
 								_find_loc_tres,
 								&id);
-						if (loc_tres) {
+						if (local_tres) {
 							r_usage->a_cpu +=
 								loc_seconds *
-								loc_tres->
+								local_tres->
 								count;
 						}
 					}
 				}
+				if (!a_usage)
+					FREE_NULL_LIST(loc_tres);
 				continue;
 			}
 
@@ -1320,8 +1336,11 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 			   registered.  This continue should rarely if
 			   ever happen.
 			*/
-			if (!c_usage)
+			if (!c_usage) {
+				if (!a_usage)
+					FREE_NULL_LIST(loc_tres);
 				continue;
+			}
 
 			if (row_start && (seconds > 0)) {
 				/* info("%d assoc %d adds " */
@@ -1337,8 +1356,12 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 
 				_add_job_alloc_time_to_cluster(
 					c_usage->loc_tres,
-					a_usage->loc_tres);
+					loc_tres);
 			}
+
+			/* The loc_tres isn't needed after this */
+			if (!a_usage)
+				FREE_NULL_LIST(loc_tres);
 
 			/* now reserved time */
 			if (!row_start || (row_start >= c_usage->start)) {
