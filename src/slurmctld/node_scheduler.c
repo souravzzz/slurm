@@ -1830,6 +1830,16 @@ extern int select_nodes(struct job_record *job_ptr, bool test_only,
 	tres_rec = xmalloc(sizeof(slurmdb_tres_rec_t));
 	tres_rec->id = TRES_MEM;
 	tres_rec->count = (uint64_t)job_ptr->details->pn_min_memory;
+	if (tres_rec->count & MEM_PER_CPU) {
+		tres_rec->count &= (~MEM_PER_CPU);
+		tres_rec->count *= job_ptr->total_cpus;
+	} else if (selected_node_cnt != NO_VAL)
+		tres_rec->count *= selected_node_cnt;
+	else
+		tres_rec->count *= req_nodes; /* This should never
+					       * happen, but here just incase.
+					       */
+
 	list_append(job_ptr->tres, tres_rec);
 
 	/* we need to have these times set to know when the endtime
