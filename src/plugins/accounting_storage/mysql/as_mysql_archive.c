@@ -2318,6 +2318,10 @@ static int _execute_archive(mysql_conn_t *mysql_conn,
 				       cluster_name, event_table,
 				       cluster_name, event_ext_table,
 				       curr_end);
+		/* FIXME: the cluster usage tables need to get
+		   purged here as well, they don't need to get
+		   archived since this can be recreated from archive.
+		*/
 		if (debug_flags & DEBUG_FLAG_DB_USAGE)
 			DB_DEBUG(mysql_conn->conn, "query\n%s", query);
 		rc = mysql_db_query(mysql_conn, query);
@@ -2427,10 +2431,17 @@ exit_steps:
 				return rc;
 		}
 
-		query = xstrdup_printf("delete from \"%s_%s\" "
-				       "where time_submit <= %ld "
-				       "&& time_end != 0",
-				       cluster_name, job_table, curr_end);
+		query = xstrdup_printf("delete t1, t2 from \"%s_%s\" t1 "
+				       "join \"%s_%s\" t2 on "
+				       "t1.job_db_inx=t2.job_db_inx where "
+				       "time_start <= %ld && time_end != 0",
+				       cluster_name, job_table,
+				       cluster_name, job_ext_table,
+				       curr_end);
+		/* FIXME: the assoc/wckey usage tables need to get
+		   purged here as well, they don't need to get
+		   archived since this can be recreated from archive.
+		*/
 		if (debug_flags & DEBUG_FLAG_DB_USAGE)
 			DB_DEBUG(mysql_conn->conn, "query\n%s", query);
 		rc = mysql_db_query(mysql_conn, query);
