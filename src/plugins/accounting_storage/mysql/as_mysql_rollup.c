@@ -318,7 +318,8 @@ static void _setup_cluster_tres_usage(mysql_conn_t *mysql_conn,
 
 	/* sanity check to make sure we don't have more
 	   allocated cpus than possible. */
-	if (loc_tres->total_time < loc_tres->time_alloc) {
+	if (loc_tres->total_time
+	    && (loc_tres->total_time < loc_tres->time_alloc)) {
 		slurm_make_time_str(&curr_start, start_char,
 				    sizeof(start_char));
 		slurm_make_time_str(&curr_end, end_char,
@@ -337,7 +338,7 @@ static void _setup_cluster_tres_usage(mysql_conn_t *mysql_conn,
 
 	/* Make sure the total time we care about
 	   doesn't go over the limit */
-	if (loc_tres->total_time < total_used) {
+	if (loc_tres->total_time && (loc_tres->total_time < total_used)) {
 		int64_t overtime;
 
 		slurm_make_time_str(&curr_start, start_char,
