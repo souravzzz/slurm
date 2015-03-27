@@ -1310,8 +1310,8 @@ extern int create_cluster_tables(mysql_conn_t *mysql_conn, char *cluster_name)
 
 	if (mysql_db_create_table(mysql_conn, table_name,
 				  event_table_fields,
-				  ", primary key (inx), index(node_name(20), "
-				  "time_start))")
+				  ", primary key (inx), "
+				  "unique index (node_name(20), time_start))")
 	    == SLURM_ERROR)
 		return SLURM_ERROR;
 
