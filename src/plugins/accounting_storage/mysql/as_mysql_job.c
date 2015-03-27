@@ -659,18 +659,18 @@ no_rollup_change:
 					   ", (%u, %u, %"PRIu64")",
 					   job_ptr->db_index,
 					   tres_rec->id, tres_rec->count);
-			debug("inserting %s(%s) with tres %u "
-			      "count of %"PRIu64"",
-			      job_ptr->name, mysql_conn->cluster_name,
-			      tres_rec->id, tres_rec->count);
+			/* debug("inserting %s(%s) with tres %u " */
+			/*       "count of %"PRIu64"", */
+			/*       job_ptr->name, mysql_conn->cluster_name, */
+			/*       tres_rec->id, tres_rec->count); */
 		}
 		list_iterator_destroy(itr);
 		if (query) {
 			xstrcat(query,
 				" on duplicate key update "
 				"count=VALUES(count);");
-			debug("%d(%s:%d) query\n%s",
-			      mysql_conn->conn, THIS_FILE, __LINE__, query);
+			if (debug_flags & DEBUG_FLAG_DB_JOB)
+				DB_DEBUG(mysql_conn->conn, "query\n%s", query);
 			rc = mysql_db_query(mysql_conn, query);
 		}
 	}
