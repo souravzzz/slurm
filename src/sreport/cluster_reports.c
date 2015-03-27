@@ -1283,7 +1283,7 @@ extern int cluster_utilization(int argc, char *argv[])
 	while ((cluster = list_next(itr))) {
 		slurmdb_cluster_accounting_rec_t *accting = NULL;
 		slurmdb_cluster_accounting_rec_t *total_acct;
-		List total_tres_acct;
+		List total_tres_acct = NULL;
 		uint64_t total_reported = 0;
 		uint64_t local_total_time = 0;
 		int curr_inx = 1;
