@@ -931,7 +931,8 @@ static int _unpack_local_suspend(local_suspend_t *object,
 	return SLURM_SUCCESS;
 }
 
-static int _process_old_sql_line(const char *data_in, char **data_full_out)
+static int _process_old_sql_line(const char *data_in,
+				 char **cluster_name, char **data_full_out)
 {
 	int start = 0, i = 0;
 	char *beginning = NULL;
@@ -942,7 +943,6 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 	char *new_vals = NULL;
 	char *vals = NULL;
 	char *new_cluster_name = NULL;
-	char *cluster_name = NULL;
 	int rc = SLURM_SUCCESS;
 	int cnt = 0, cluster_inx = -1, ending_start = 0, ending_end = 0;
 	bool delete = 0;
@@ -984,9 +984,15 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 	if (!strncmp("cluster_event_table", data_in+i, 19)) {
 		i+=19;
 		table = event_table;
+	} else if (!strncmp("cluster_event_ext_table", data_in+i, 23)) {
+		i+=23;
+		table = event_ext_table;
 	} else if (!strncmp("job_table", data_in+i, 9)) {
 		i+=9;
 		table = job_table;
+	} else if (!strncmp("job_ext_table", data_in+i, 13)) {
+		i+=13;
+		table = job_ext_table;
 	} else if (!strncmp("step_table", data_in+i, 10)) {
 		i+=10;
 		table = step_table;
@@ -1094,6 +1100,18 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 			else if (table == step_table)
 				xstrcat(fields, "step_name");
 			i+=4;
+		} else if (!strncmp("id_tres", data_in+i, 7)) {
+			start = i;
+			while (data_in[i]
+			       && data_in[i] != ',' && data_in[i] != ')') {
+				i++;
+			}
+			if (!data_in[i]) {
+				error("returning here end");
+				rc = SLURM_ERROR;
+				goto end_it;
+			}
+			xstrncat(fields, data_in+start, (i-start));
 		} else if (!strncmp("id", data_in+i, 2)) {
 			i+=2;
 			if ((table == assoc_day_table)
@@ -1151,9 +1169,9 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 					rc = SLURM_ERROR;
 					goto end_it;
 				}
-
-				cluster_name = xstrndup(data_in+start,
-							(i-start));
+				xfree(*cluster_name);
+				*cluster_name = xstrndup(data_in+start,
+							 (i-start));
 				i++;
 			}
 		} else {
@@ -1310,9 +1328,11 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 			cnt = 0;
 			while ((i < ending_start) && data_in[i] != ')') {
 				start = i;
-				while ((i < ending_start)
-				       && data_in[i] != ','
-				       && data_in[i] != ')') {
+				while (i < ending_start) {
+					if (data_in[i] == ',' ||
+					    (data_in[i] == ')' &&
+					     data_in[i-1] != '('))
+						break;
 					i++;
 				}
 				if (!data_in[i]) {
@@ -1324,19 +1344,22 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 					   ticks */
 					xstrncat(new_cluster_name,
 						 data_in+start+1, (i-start-2));
-					if (cluster_name) {
-						if (strcmp(cluster_name,
+					if (*cluster_name) {
+						if (strcmp(*cluster_name,
 							   new_cluster_name))
 							new_cluster = 1;
 						else
 							xfree(new_cluster_name);
 					} else {
-						cluster_name = new_cluster_name;
+						xfree(*cluster_name);
+						*cluster_name =
+							new_cluster_name;
 						new_cluster_name = NULL;
 					}
 				} else {
 					xstrncat(new_vals, data_in+start,
 						 (i-start));
+
 					if (data_in[i]) {
 						if (data_in[i] == ',')
 							xstrcat(new_vals, ", ");
@@ -1365,12 +1388,12 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 				/*      fields, vals, ending); */
 				xstrfmtcat(data_out,
 					   "%s \"%s_%s\" (%s) values %s %s",
-					   beginning, cluster_name,
+					   beginning, *cluster_name,
 					   table, fields, vals, ending);
 				new_cluster = 0;
 				xfree(vals);
-				xfree(cluster_name);
-				cluster_name = new_cluster_name;
+				xfree(*cluster_name);
+				*cluster_name = new_cluster_name;
 				new_cluster_name = NULL;
 			}
 
@@ -1385,7 +1408,7 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 		i = ending_end;
 	}
 
-	if (!cluster_name) {
+	if (!*cluster_name) {
 		error("No cluster given for %s", table);
 		goto end_it;
 	}
@@ -1394,24 +1417,23 @@ static int _process_old_sql_line(const char *data_in, char **data_full_out)
 		/* info("adding insert\n%s \"%s_%s\" (%s) values %s %s",
 		   beginning, cluster_name, table, fields, vals, ending); */
 		xstrfmtcat(data_out, "%s \"%s_%s\" (%s) values %s %s",
-			   beginning, cluster_name, table, fields,
+			   beginning, *cluster_name, table, fields,
 			   vals, ending);
 	} else {
 		if (fields) {
 			/* info("adding delete\n%s \"%s_%s\" %s", */
 			/*      beginning, cluster_name, table, fields); */
 			xstrfmtcat(data_out, "%s \"%s_%s\" %s",
-				   beginning, cluster_name, table, fields);
+				   beginning, *cluster_name, table, fields);
 		} else {
 			/* info("adding drop\ndrop table \"%s_%s\";", */
 			/*      cluster_name, table); */
 			xstrfmtcat(data_out, "drop table \"%s_%s\";",
-				   cluster_name, table);
+				   *cluster_name, table);
 		}
 	}
 
 end_it:
-	xfree(cluster_name);
 	xfree(beginning);
 	xfree(ending);
 	xfree(fields);
@@ -1429,14 +1451,16 @@ static int _process_old_sql(char **data)
 	char *data_in = *data;
 	char *data_out = NULL;
 	int rc = SLURM_SUCCESS;
+	char *cluster_name = NULL;
 
 	while (data_in[i]) {
-		if ((rc = _process_old_sql_line(data_in+i, &data_out)) == -1)
+		if ((rc = _process_old_sql_line(
+			     data_in+i, &cluster_name, &data_out)) == -1)
 			break;
 		i += rc;
 	}
 	//rc = -1;
-
+	xfree(cluster_name);
 	xfree(data_in);
 	if (rc == -1)
 		xfree(data_out);
@@ -2658,7 +2682,7 @@ got_sql:
 		error("No data to load");
 		return SLURM_ERROR;
 	}
-	if (debug_flags & DEBUG_FLAG_DB_USAGE)
+//	if (debug_flags & DEBUG_FLAG_DB_USAGE)
 		DB_DEBUG(mysql_conn->conn, "query\n%s", data);
 	error_code = mysql_db_query_check_after(mysql_conn, data);
 	xfree(data);
