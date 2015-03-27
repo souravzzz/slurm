@@ -41,8 +41,6 @@
 
 #include "accounting_storage_mysql.h"
 
-extern bool ext_tables_created;
-
 extern int as_mysql_convert_event_table(mysql_conn_t *mysql_conn, char *table);
 
 extern int as_mysql_convert_usage_table(mysql_conn_t *mysql_conn, char *table);

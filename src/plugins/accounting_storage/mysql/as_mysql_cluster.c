@@ -166,6 +166,15 @@ extern int as_mysql_add_clusters(mysql_conn_t *mysql_conn, uint32_t uid,
 				rc = ESLURM_BAD_NAME;
 			goto end_it;
 		}
+
+		if ((rc = update_tres_views(mysql_conn, object->name))
+		    != SLURM_SUCCESS) {
+			xfree(extra);
+			xfree(cols);
+			xfree(vals);
+			added = 0;
+			goto end_it;
+		}
 	}
 
 	/* Now that all the tables were created successfully lets go

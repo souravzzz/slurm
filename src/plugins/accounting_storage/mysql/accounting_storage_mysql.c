@@ -780,7 +780,6 @@ static int _as_mysql_acct_check_tables(mysql_conn_t *mysql_conn)
 			break;
 	}
 	list_iterator_destroy(itr);
-	ext_tables_created = 1;
 	slurm_mutex_unlock(&as_mysql_cluster_list_lock);
 
 	if (rc != SLURM_SUCCESS)
@@ -1003,9 +1002,6 @@ extern int create_cluster_ext_tables(mysql_conn_t *mysql_conn,
 	/* }; */
 
 	char table_name[200];
-
-	if (ext_tables_created)
-		return SLURM_SUCCESS;
 
 	snprintf(table_name, sizeof(table_name), "\"%s_%s\"",
 		 cluster_name, event_ext_table);
@@ -1442,7 +1438,8 @@ extern int remove_cluster_tables(mysql_conn_t *mysql_conn, char *cluster_name)
 		   "\"%s_%s\", \"%s_%s\", \"%s_%s\", \"%s_%s\", "
 		   "\"%s_%s\", \"%s_%s\", \"%s_%s\", \"%s_%s\", "
 		   "\"%s_%s\", \"%s_%s\", \"%s_%s\", \"%s_%s\", "
-		   "\"%s_%s\", \"%s_%s\", \"%s_%s\", \"%s_%s\";",
+		   "\"%s_%s\", \"%s_%s\", \"%s_%s\", \"%s_%s\";"
+		   "drop view \"%s_%s\", \"%s_%s\", \"%s_%s\", \"%s_%s\";",
 		   cluster_name, assoc_table,
 		   cluster_name, assoc_day_table,
 		   cluster_name, assoc_hour_table,
@@ -1461,7 +1458,11 @@ extern int remove_cluster_tables(mysql_conn_t *mysql_conn, char *cluster_name)
 		   cluster_name, wckey_hour_table,
 		   cluster_name, wckey_month_table,
 		   cluster_name, event_ext_table,
-		   cluster_name, job_ext_table
+		   cluster_name, job_ext_table,
+		   cluster_name, event_view,
+		   cluster_name, event_ext_view,
+		   cluster_name, job_view,
+		   cluster_name, job_ext_view
 		   /* cluster_name, resv_ext_table, */
 		   );
 	/* Since we could possibly add this exact cluster after this

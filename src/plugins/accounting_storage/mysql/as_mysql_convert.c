@@ -38,8 +38,6 @@
 
 #include "as_mysql_convert.h"
 
-bool ext_tables_created = 0;
-
 static int _rename_usage_columns(mysql_conn_t *mysql_conn, char *table)
 {
 	MYSQL_ROW row;
@@ -763,7 +761,6 @@ extern int as_mysql_convert_tables(mysql_conn_t *mysql_conn)
 
 	if (rc == SLURM_SUCCESS) {
 		info("Conversion done: success!");
-		ext_tables_created = 1;
 	}
 
 	return rc;
