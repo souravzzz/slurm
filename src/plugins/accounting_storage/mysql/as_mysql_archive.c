@@ -2682,7 +2682,7 @@ got_sql:
 		error("No data to load");
 		return SLURM_ERROR;
 	}
-//	if (debug_flags & DEBUG_FLAG_DB_USAGE)
+	if (debug_flags & DEBUG_FLAG_DB_USAGE)
 		DB_DEBUG(mysql_conn->conn, "query\n%s", data);
 	error_code = mysql_db_query_check_after(mysql_conn, data);
 	xfree(data);
