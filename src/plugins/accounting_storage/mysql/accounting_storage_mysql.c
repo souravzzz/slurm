@@ -1864,7 +1864,7 @@ extern int remove_common(mysql_conn_t *mysql_conn,
 {
 	int rc = SLURM_SUCCESS;
 	char *query = NULL;
-	char *loc_assoc_char = NULL;
+	char *loc_assoc_char = NULL, *loc_usage_id_char = NULL;
 	MYSQL_RES *result = NULL;
 	MYSQL_ROW row;
 	time_t day_old = now - DELETE_SEC_BACK;
@@ -2026,7 +2026,7 @@ extern int remove_common(mysql_conn_t *mysql_conn,
 		xfree(query);
 
 		rc = 0;
-		loc_assoc_char = NULL;
+		xfree(loc_assoc_char);
 		while ((row = mysql_fetch_row(result))) {
 			slurmdb_assoc_rec_t *rem_assoc = NULL;
 			if (loc_assoc_char)
@@ -2050,6 +2050,9 @@ extern int remove_common(mysql_conn_t *mysql_conn,
 		return rc;
 	}
 
+	loc_usage_id_char = xstrdup(loc_assoc_char);
+	xstrsubstituteall(loc_usage_id_char, "id_assoc", "id");
+
 	/* We should not have to delete from usage table, only flag since we
 	 * only delete things that are typos.
 	 */
@@ -2057,9 +2060,10 @@ extern int remove_common(mysql_conn_t *mysql_conn,
 		   "update \"%s_%s\" set mod_time=%ld, deleted=1 where (%s);"
 		   "update \"%s_%s\" set mod_time=%ld, deleted=1 where (%s);"
 		   "update \"%s_%s\" set mod_time=%ld, deleted=1 where (%s);",
-		   cluster_name, assoc_day_table, now, loc_assoc_char,
-		   cluster_name, assoc_hour_table, now, loc_assoc_char,
-		   cluster_name, assoc_month_table, now, loc_assoc_char);
+		   cluster_name, assoc_day_table, now, loc_usage_id_char,
+		   cluster_name, assoc_hour_table, now, loc_usage_id_char,
+		   cluster_name, assoc_month_table, now, loc_usage_id_char);
+	xfree(loc_usage_id_char);
 
 	if (debug_flags & DEBUG_FLAG_DB_ASSOC)
 		DB_DEBUG(mysql_conn->conn, "query\n%s %zd",
