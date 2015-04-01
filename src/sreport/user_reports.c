@@ -329,28 +329,23 @@ extern int user_top(int argc, char *argv[])
 
 		itr = list_iterator_create(slurmdb_report_cluster->user_list);
 		while ((slurmdb_report_user = list_next(itr))) {
-			slurmdb_tres_rec_t *cpu_tres_rec, *energy_tres_rec;
+			uint64_t cpu_alloc_secs = 0, energy_alloc_secs = 0;
+			slurmdb_tres_rec_t *tres_rec;
 			int curr_inx = 1;
 
 			tres_id = TRES_CPU;
-
-			if (!(cpu_tres_rec = list_find_first(
-				      slurmdb_report_user->tres,
-				      slurmdb_find_tres_in_list,
-				      &tres_id))) {
-				info("error, no cpu(%d) tres!", tres_id);
-				continue;
-			}
+			if ((tres_rec = list_find_first(
+				     slurmdb_report_user->tres,
+				     slurmdb_find_tres_in_list,
+				     &tres_id)))
+				cpu_alloc_secs = tres_rec->alloc_secs;
 
 			tres_id = TRES_ENERGY;
-
-			if (!(energy_tres_rec = list_find_first(
-				      slurmdb_report_user->tres,
-				      slurmdb_find_tres_in_list,
-				      &tres_id))) {
-				info("error, no energy(%d) tres!", tres_id);
-				continue;
-			}
+			if ((tres_rec = list_find_first(
+				     slurmdb_report_user->tres,
+				     slurmdb_find_tres_in_list,
+				     &tres_id)))
+				energy_alloc_secs = tres_rec->alloc_secs;
 
 			while ((field = list_next(itr2))) {
 				char *tmp_char = NULL;
@@ -404,7 +399,7 @@ extern int user_top(int argc, char *argv[])
 				case PRINT_USER_USED:
 					field->print_routine(
 						field,
-						cpu_tres_rec->alloc_secs,
+						cpu_alloc_secs,
 						cluster_cpu_tres_rec->
 						alloc_secs,
 						(curr_inx == field_count));
@@ -412,7 +407,7 @@ extern int user_top(int argc, char *argv[])
 				case PRINT_USER_ENERGY:
 					field->print_routine(
 						field,
-						energy_tres_rec->alloc_secs,
+						energy_alloc_secs,
 						(curr_inx ==field_count));
 					break;
 				default:

@@ -728,32 +728,31 @@ static int _run_report(int type, int argc, char *argv[])
 		slurmdb_report_cluster_grouping_list);
 	while ((cluster_group = list_next(cluster_itr))) {
 		uint32_t tres_id = TRES_CPU;
-		slurmdb_tres_rec_t *cluster_cpu_tres_rec;
+		slurmdb_tres_rec_t *tres_rec;
+		uint64_t cluster_cpu_alloc_secs = 0;
 
-		if (!(cluster_cpu_tres_rec = list_find_first(
-			      cluster_group->tres,
-			      slurmdb_find_tres_in_list,
-			      &tres_id))) {
-			info("error, no cpu(%d) tres!", tres_id);
-			continue;
-		}
+		if (cluster_group->tres &&
+		    (tres_rec = list_find_first(
+			    cluster_group->tres,
+			    slurmdb_find_tres_in_list,
+			    &tres_id)))
+			cluster_cpu_alloc_secs = tres_rec->alloc_secs;
 
 		list_sort(cluster_group->acct_list,
 		          (ListCmpF)_sort_acct_grouping_dec);
 		acct_itr = list_iterator_create(cluster_group->acct_list);
 		while ((acct_group = list_next(acct_itr))) {
-			slurmdb_tres_rec_t *acct_cpu_tres_rec;
+			uint64_t acct_cpu_alloc_secs = 0;
 
-			if (!(acct_cpu_tres_rec = list_find_first(
-				      acct_group->tres,
-				      slurmdb_find_tres_in_list,
-				      &tres_id))) {
-				info("error, no cpu(%d) tres!", tres_id);
-				continue;
-			}
+			if (acct_group->tres &&
+			    (tres_rec = list_find_first(
+				    acct_group->tres,
+				    slurmdb_find_tres_in_list,
+				    &tres_id)))
+				acct_cpu_alloc_secs = tres_rec->alloc_secs;
 
 			while ((field = list_next(itr))) {
-				switch(field->type) {
+				switch (field->type) {
 				case PRINT_JOB_CLUSTER:
 					field->print_routine(
 						field,
@@ -775,24 +774,23 @@ static int _run_report(int type, int argc, char *argv[])
 			list_iterator_reset(itr);
 			local_itr = list_iterator_create(acct_group->groups);
 			while ((job_group = list_next(local_itr))) {
-				slurmdb_tres_rec_t *job_cpu_tres_rec;
+				uint64_t job_cpu_alloc_secs = 0;
 
-				if (!(job_cpu_tres_rec = list_find_first(
-					      job_group->tres,
-					      slurmdb_find_tres_in_list,
-					      &tres_id))) {
-					info("error, no cpu(%d) tres!",
-					     tres_id);
-					continue;
-				}
+				if (job_group->tres &&
+				    (tres_rec = list_find_first(
+					    job_group->tres,
+					    slurmdb_find_tres_in_list,
+					    &tres_id)))
+					job_cpu_alloc_secs =
+						tres_rec->alloc_secs;
 
 				field = list_next(itr2);
 				switch(field->type) {
 				case PRINT_JOB_SIZE:
 					field->print_routine(
 						field,
-						job_cpu_tres_rec->alloc_secs,
-						acct_cpu_tres_rec->alloc_secs,
+						job_cpu_alloc_secs,
+						acct_cpu_alloc_secs,
 						0);
 					break;
 				case PRINT_JOB_COUNT:
@@ -814,8 +812,8 @@ static int _run_report(int type, int argc, char *argv[])
 			temp_format = time_format;
 			time_format = SLURMDB_REPORT_TIME_PERCENT;
 			if (!print_job_count) {
-				count1 = acct_cpu_tres_rec->alloc_secs;
-				count2 = cluster_cpu_tres_rec->alloc_secs;
+				count1 = acct_cpu_alloc_secs;
+				count2 = cluster_cpu_alloc_secs;
 			} else {
 				count1 = acct_group->count;
 				count2 = cluster_group->count;

@@ -110,7 +110,7 @@ static void _check_create_grouping(
 	}
 
 	itr = list_iterator_create(cluster_group->acct_list);
-	while((acct_group = list_next(itr))) {
+	while ((acct_group = list_next(itr))) {
 		if (!strcmp(name, acct_group->acct))
 			break;
 	}
@@ -290,7 +290,7 @@ static List _process_grouped_report(
 	itr = list_iterator_create(object_list);
 	if (object2_list)
 		itr2 = list_iterator_create(object2_list);
-	while((object = list_next(itr))) {
+	while ((object = list_next(itr))) {
 		char *cluster = NULL;
 		slurmdb_wckey_rec_t *wckey = (slurmdb_wckey_rec_t *)object;
 		slurmdb_assoc_rec_t *assoc =
@@ -310,7 +310,7 @@ static List _process_grouped_report(
 			continue;
 		}
 
-		while((object2 = list_next(itr2))) {
+		while ((object2 = list_next(itr2))) {
 			slurmdb_wckey_rec_t *wckey2 =
 				(slurmdb_wckey_rec_t *)object2;
 			slurmdb_assoc_rec_t *assoc2 =
