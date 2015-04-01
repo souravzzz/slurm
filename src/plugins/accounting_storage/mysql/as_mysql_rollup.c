@@ -54,7 +54,7 @@ enum {
 };
 
 typedef struct {
-	uint32_t count;
+	uint64_t count;
 	uint32_t id;
 	uint64_t time_alloc;
 	uint64_t time_down;
@@ -199,7 +199,7 @@ static void _add_job_alloc_time_to_cluster(List c_tres, List j_tres)
 }
 
 static void _setup_cluster_tres(List tres, uint32_t id,
-				uint32_t count, int seconds)
+				uint64_t count, int seconds)
 {
 	local_tres_usage_t *loc_tres =
 		list_find_first(tres, _find_loc_tres, &id);
@@ -326,7 +326,7 @@ static void _setup_cluster_tres_usage(mysql_conn_t *mysql_conn,
 				    sizeof(end_char));
 		error("We have more allocated time than is "
 		      "possible (%"PRIu64" > %"PRIu64") for "
-		      "cluster %s(%d) from %s - %s tres %u",
+		      "cluster %s(%"PRIu64") from %s - %s tres %u",
 		      loc_tres->time_alloc, loc_tres->total_time,
 		      cluster_name, loc_tres->count,
 		      start_char, end_char, loc_tres->id);
@@ -348,7 +348,7 @@ static void _setup_cluster_tres_usage(mysql_conn_t *mysql_conn,
 		error("We have more time than is "
 		      "possible (%"PRIu64"+%"PRIu64"+%"
 		      PRIu64")(%"PRIu64") > %"PRIu64" for "
-		      "cluster %s(%d) from %s - %s tres %u",
+		      "cluster %s(%"PRIu64") from %s - %s tres %u",
 		      loc_tres->time_alloc, loc_tres->time_down,
 		      loc_tres->time_pd, total_used,
 		      loc_tres->total_time,
@@ -420,7 +420,7 @@ static void _setup_cluster_tres_usage(mysql_conn_t *mysql_conn,
 	/*      slurm_ctime(&loc_tres->start)); */
 	/* info("to %s", slurm_ctime(&loc_tres->end)); */
 	if (*query)
-		xstrfmtcat(*query, ", (%ld, %ld, %ld, %u, %u, "
+		xstrfmtcat(*query, ", (%ld, %ld, %ld, %u, %"PRIu64", "
 			   "%"PRIu64", %"PRIu64", %"PRIu64", "
 			   "%"PRIu64", %"PRIu64", %"PRIu64")",
 			   now, now, use_start, loc_tres->id,
@@ -437,7 +437,7 @@ static void _setup_cluster_tres_usage(mysql_conn_t *mysql_conn,
 			   "time_start, id_tres, count, "
 			   "alloc_secs, down_secs, pdown_secs, "
 			   "idle_secs, over_secs, resv_secs) "
-			   "values (%ld, %ld, %ld, %u, %u, "
+			   "values (%ld, %ld, %ld, %u, %"PRIu64", "
 			   "%"PRIu64", %"PRIu64", %"PRIu64", "
 			   "%"PRIu64", %"PRIu64", %"PRIu64")",
 			   cluster_name, cluster_hour_table,
@@ -751,7 +751,7 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 
 				_setup_cluster_tres(loc_c_usage->loc_tres,
 						    tres_rec->id,
-						    slurm_atoul(row[i]),
+						    slurm_atoull(row[i]),
 						    (row_end - row_start));
 			}
 
@@ -1224,7 +1224,7 @@ extern int as_mysql_hourly_rollup(mysql_conn_t *mysql_conn,
 				 */
 				if (!row[i] || !row[i][0])
 					continue;
-				time = slurm_atoul(row[i]) * seconds;
+				time = slurm_atoull(row[i]) * seconds;
 				_add_time_tres(loc_tres,
 					       TIME_ALLOC, tres_rec->id,
 					       time);
