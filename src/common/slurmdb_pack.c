@@ -611,7 +611,7 @@ unpack_error:
 extern void slurmdb_pack_cluster_rec(void *in, uint16_t rpc_version, Buf buffer)
 {
 	slurmdb_cluster_accounting_rec_t *slurmdb_info = NULL;
-	slurmdb_tres_rec_t *tres_rec;
+	slurmdb_tres_rec_t *tres_rec = NULL;
 	ListIterator itr = NULL;
 	uint32_t count = NO_VAL;
 	slurmdb_cluster_rec_t *object = (slurmdb_cluster_rec_t *)in;
@@ -724,12 +724,14 @@ extern void slurmdb_pack_cluster_rec(void *in, uint16_t rpc_version, Buf buffer)
 		pack16(object->classification, buffer);
 		packstr(object->control_host, buffer);
 		pack32(object->control_port, buffer);
-		itr = list_iterator_create(object->tres);
-		while ((tres_rec = list_next(itr))) {
-			if (tres_rec->id == 1)
-				break;
+		if (object->tres) {
+			itr = list_iterator_create(object->tres);
+			while ((tres_rec = list_next(itr))) {
+				if (tres_rec->id == TRES_CPU)
+					break;
+			}
+			list_iterator_destroy(itr);
 		}
-		list_iterator_destroy(itr);
 		if (tres_rec)
 			count = (uint32_t)tres_rec->count;
 		else
@@ -1153,7 +1155,7 @@ unpack_error:
 
 extern void slurmdb_pack_event_rec(void *in, uint16_t rpc_version, Buf buffer)
 {
-	slurmdb_tres_rec_t *tres_rec;
+	slurmdb_tres_rec_t *tres_rec = NULL;
 	ListIterator itr = NULL;
 	uint32_t count = NO_VAL;
 	slurmdb_event_rec_t *object = (slurmdb_event_rec_t *)in;
@@ -1213,12 +1215,15 @@ extern void slurmdb_pack_event_rec(void *in, uint16_t rpc_version, Buf buffer)
 
 		packstr(object->cluster, buffer);
 		packstr(object->cluster_nodes, buffer);
-		itr = list_iterator_create(object->tres);
-		while ((tres_rec = list_next(itr))) {
-			if (tres_rec->id == 1)
-				break;
+		if (object->tres) {
+			itr = list_iterator_create(object->tres);
+			while ((tres_rec = list_next(itr))) {
+				if (tres_rec->id == TRES_CPU)
+					break;
+			}
+			list_iterator_destroy(itr);
 		}
-		list_iterator_destroy(itr);
+
 		if (tres_rec)
 			count = (uint32_t)tres_rec->count;
 		else
