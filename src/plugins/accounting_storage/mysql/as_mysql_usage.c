@@ -419,7 +419,7 @@ static int _get_object_usage(mysql_conn_t *mysql_conn,
 				   NO_LOCK, NO_LOCK, NO_LOCK, NO_LOCK };
 
 	char *usage_req_inx[] = {
-		"t1.id",
+		"t3.id_assoc",
 		"t1.id_tres",
 		"t1.time_start",
 		"t1.alloc_secs",
@@ -431,6 +431,9 @@ static int _get_object_usage(mysql_conn_t *mysql_conn,
 		USAGE_ALLOC,
 		USAGE_COUNT
 	};
+
+	if (type == DBD_GET_WCKEY_USAGE)
+		usage_req_inx[0] = "t1.id";
 
 	xstrfmtcat(tmp, "%s", usage_req_inx[i]);
 	for (i=1; i<USAGE_COUNT; i++) {
@@ -465,8 +468,8 @@ static int _get_object_usage(mysql_conn_t *mysql_conn,
 	}
 	xfree(tmp);
 
-	debug4("%d(%s:%d) query\n%s",
-	       mysql_conn->conn, THIS_FILE, __LINE__, query);
+	if (debug_flags & DEBUG_FLAG_DB_USAGE)
+		DB_DEBUG(mysql_conn->conn, "query\n%s", query);
 	result = mysql_db_query_ret(mysql_conn, query, 0);
 	xfree(query);
 
@@ -573,8 +576,8 @@ static int _get_cluster_usage(mysql_conn_t *mysql_conn, uid_t uid,
 		tmp, cluster_rec->name, my_usage_table, end, start);
 
 	xfree(tmp);
-	debug4("%d(%s:%d) query\n%s",
-	       mysql_conn->conn, THIS_FILE, __LINE__, query);
+	if (debug_flags & DEBUG_FLAG_DB_USAGE)
+		DB_DEBUG(mysql_conn->conn, "query\n%s", query);
 
 	if (!(result = mysql_db_query_ret(mysql_conn, query, 0))) {
 		xfree(query);
@@ -663,10 +666,10 @@ extern int get_usage_for_list(mysql_conn_t *mysql_conn,
 		itr = list_iterator_create(object_list);
 		while ((wckey = list_next(itr))) {
 			if (id_str)
-				xstrfmtcat(id_str, " || id_wckey=%d",
+				xstrfmtcat(id_str, " || id=%d",
 					   wckey->id);
 			else
-				xstrfmtcat(id_str, "id_wckey=%d", wckey->id);
+				xstrfmtcat(id_str, "id=%d", wckey->id);
 		}
 		list_iterator_destroy(itr);
 
