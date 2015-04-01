@@ -680,6 +680,7 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 		xfree(query);
 		return NULL;
 	}
+
 	xfree(query);
 
 	itr2 = list_iterator_create(assoc_mgr_tres_list);
@@ -687,7 +688,6 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 		time_t row_start = slurm_atoul(row[EVENT_REQ_START]);
 		time_t row_end = slurm_atoul(row[EVENT_REQ_END]);
 		uint16_t state = slurm_atoul(row[EVENT_REQ_STATE]);
-		local_tres_usage_t *loc_tres;
 
 		if (row_start < curr_start)
 			row_start = curr_start;
@@ -772,23 +772,34 @@ static local_cluster_usage_t *_setup_cluster_usage(mysql_conn_t *mysql_conn,
 				local_end = c_usage->end;
 			seconds = (local_end - local_start);
 			if (seconds > 0) {
-				ListIterator c_itr = list_iterator_create(
-					c_usage->loc_tres);
+				i = EVENT_REQ_COUNT-1;
+				list_iterator_reset(itr2);
+				while ((tres_rec = list_next(itr2))) {
+					uint64_t time;
+					i++;
+					/* Skip if the tres is NULL,
+					 * it means this cluster
+					 * doesn't care about it.
+					 */
+					if (!row[i] || !row[i][0])
+						continue;
 
-				while ((loc_tres = list_next(c_itr))) {
+					time = slurm_atoull(row[i]) * seconds;
+
 					/* info("node %s adds tres %d " */
-					/*      "(%d)(%d-%d) * %d = %d " */
-					/*      "to %d", */
+					/*      "(%d)(%d-%d) * %"PRIu64" " */
+					/*      "= %"PRIu64" to %"PRIu64"", */
 					/*      row[EVENT_REQ_NAME], */
 					/*      loc_tres->id, seconds, */
 					/*      local_end, local_start, */
-					/*      c_tres->count, */
-					/*      seconds * c_tres->count, */
-					/*      c_tres->count); */
-					loc_tres->time_down +=
-						seconds * loc_tres->count;
+					/*      slurm_atoull(row[i]), */
+					/*      time, */
+					/*      loc_tres->time_down); */
+
+					_add_time_tres(c_usage->loc_tres,
+					       TIME_DOWN, tres_rec->id,
+					       time);
 				}
-				list_iterator_destroy(c_itr);
 			}
 		}
 	}
