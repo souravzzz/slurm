@@ -910,7 +910,7 @@ extern int cluster_user_by_account(int argc, char *argv[])
 			  (ListCmpF)sort_user_dec);
 
 		itr = list_iterator_create(slurmdb_report_cluster->user_list);
-		while((slurmdb_report_user = list_next(itr))) {
+		while ((slurmdb_report_user = list_next(itr))) {
 			uint64_t cpu_alloc_secs = 0, energy_alloc_secs = 0;
 			int curr_inx = 1;
 
