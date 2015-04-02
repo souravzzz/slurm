@@ -448,7 +448,7 @@ static int _get_object_usage(mysql_conn_t *mysql_conn,
 			"where (t1.time_start < %ld && t1.time_start >= %ld) "
 			"&& t1.id=t2.id_assoc && (%s) && "
 			"t2.lft between t3.lft and t3.rgt "
-			"order by t1.id, time_start;",
+			"order by t3.id_assoc, time_start;",
 			tmp, cluster_name, my_usage_table,
 			cluster_name, assoc_table, cluster_name, assoc_table,
 			end, start, id_str);
