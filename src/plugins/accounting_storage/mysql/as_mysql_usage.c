@@ -760,7 +760,6 @@ extern int get_usage_for_list(mysql_conn_t *mysql_conn,
 		      list_count(usage_list));
 	list_destroy(usage_list);
 
-
 	return rc;
 }
 
