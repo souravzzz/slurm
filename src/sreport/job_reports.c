@@ -533,7 +533,7 @@ static int _setup_grouping_print_fields_list(List grouping_list)
 		grouping_print_fields_list = list_create(destroy_print_field);
 
 	itr = list_iterator_create(grouping_list);
-	while((object = list_next(itr))) {
+	while ((object = list_next(itr))) {
 		field = xmalloc(sizeof(print_field_t));
 		size = atoi(object);
 		if (print_job_count)
@@ -635,6 +635,9 @@ static int _run_report(int type, int argc, char *argv[])
 
 	_set_cond(&i, argc, argv, job_cond, format_list, grouping_list);
 
+	if (!individual_grouping && !list_count(grouping_list))
+		slurm_addto_char_list(grouping_list, "50,250,500,1000");
+
 	switch (type) {
 	case GROUPED_TOP_ACCT:
 		if (!(slurmdb_report_cluster_grouping_list =
@@ -643,7 +646,6 @@ static int _run_report(int type, int argc, char *argv[])
 			exit_code = 1;
 			goto end_it;
 		}
-
 		if (!list_count(format_list))
 			slurm_addto_char_list(format_list, "Cl,a");
 		break;
@@ -656,7 +658,7 @@ static int _run_report(int type, int argc, char *argv[])
 		}
 		if (!list_count(format_list))
 			slurm_addto_char_list(format_list, "Cl,wc");
-		object_str = " by Wckey ";
+		object_str = "by Wckey ";
 		break;
 	case GROUPED_TOP_ACCT_AND_WCKEY:
 		if (!(slurmdb_report_cluster_grouping_list =
@@ -665,7 +667,6 @@ static int _run_report(int type, int argc, char *argv[])
 			exit_code = 1;
 			goto end_it;
 		}
-
 		if (!list_count(format_list))
 			slurm_addto_char_list(format_list, "Cl,a%-20");
 		break;
@@ -674,9 +675,6 @@ static int _run_report(int type, int argc, char *argv[])
 		goto end_it;
 		break;
 	}
-
-	if (!individual_grouping && !list_count(grouping_list))
-		slurm_addto_char_list(grouping_list, "50,250,500,1000");
 
 	_setup_print_fields_list(format_list);
 	list_destroy(format_list);
@@ -693,7 +691,7 @@ static int _run_report(int type, int argc, char *argv[])
 		slurm_make_time_str(&my_end, end_char, sizeof(end_char));
 		printf("----------------------------------------"
 		       "----------------------------------------\n");
-		printf("Job Sizes%s%s - %s (%d secs)\n",
+		printf("Job Sizes %s%s - %s (%d secs)\n",
 		       object_str, start_char, end_char,
 		       (int)(job_cond->usage_end - job_cond->usage_start));
 		if (print_job_count)
