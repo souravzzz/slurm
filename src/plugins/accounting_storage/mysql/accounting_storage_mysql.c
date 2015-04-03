@@ -2284,6 +2284,9 @@ extern int fini ( void )
 	destroy_mysql_db_info(mysql_db_info);
 	xfree(mysql_db_name);
 	xfree(default_qos_str);
+	xfree(tres_view_str);
+	xfree(full_tres_query);
+
 	mysql_db_cleanup();
 	return SLURM_SUCCESS;
 }
