@@ -538,12 +538,11 @@ extern int sacctmgr_list_event(int argc, char *argv[])
 			field->name = xstrdup("Cluster");
 			field->len = 10;
 			field->print_routine = print_fields_str;
-		} else if (!strncasecmp("TRES", object,
-					MAX(command_len, 2)) ||
-			   !strncasecmp("CPUs", object, MAX(command_len, 2))) {
-			field->type = PRINT_TRES;
-			field->name = xstrdup("TRES");
-			field->len = 20;
+		} else if (!strncasecmp("CPUs", object,
+				MAX(command_len, 2))) {
+			field->type = PRINT_CPUS;
+			field->name = xstrdup("CPUs");
+			field->len = 7;
 			field->print_routine = print_fields_str;
 		} else if (!strncasecmp("Duration", object,
 				       MAX(command_len, 2))) {
@@ -574,7 +573,8 @@ extern int sacctmgr_list_event(int argc, char *argv[])
 			field->name = xstrdup("Node Name");
 			field->len = -15;
 			field->print_routine = print_fields_str;
-		} else if (!strncasecmp("Reason", object, MAX(command_len, 1))) {
+		} else if (!strncasecmp("Reason", object,
+					MAX(command_len, 1))) {
 			field->type = PRINT_REASON;
 			field->name = xstrdup("Reason");
 			field->len = 30;
@@ -595,6 +595,12 @@ extern int sacctmgr_list_event(int argc, char *argv[])
 			field->type = PRINT_STATE;
 			field->name = xstrdup("State");
 			field->len = 6;
+			field->print_routine = print_fields_str;
+		} else if (!strncasecmp("TRES", object,
+					MAX(command_len, 2))) {
+			field->type = PRINT_TRES;
+			field->name = xstrdup("TRES");
+			field->len = 20;
 			field->print_routine = print_fields_str;
 		} else if (!strncasecmp("User", object, MAX(command_len, 1))) {
 			field->type = PRINT_USER;
@@ -638,9 +644,10 @@ extern int sacctmgr_list_event(int argc, char *argv[])
 	field_count = list_count(print_fields_list);
 
 	while((event = list_next(itr))) {
-		int curr_inx = 1;
+		int curr_inx = 1, cpu_tres = TRES_CPU;
 		char tmp[20], *tmp_char;
 		time_t newend = event->period_end;
+
 		while((field = list_next(itr2))) {
 			switch(field->type) {
 			case PRINT_CLUSTER:
@@ -653,14 +660,22 @@ extern int sacctmgr_list_event(int argc, char *argv[])
 					event->cluster_nodes,
 					(curr_inx == field_count));
 				break;
-			case PRINT_TRES:
-				tmp_char = slurmdb_make_tres_string(
-					event->tres);
+			case PRINT_CPUS:
+				if (event->tres) {
+					slurmdb_tres_rec_t *tres_rec;
+					if ((tres_rec = list_find_first(
+						     event->tres,
+						     slurmdb_find_tres_in_list,
+						     &cpu_tres)))
+						convert_num_unit(
+							(float)tres_rec->count,
+							tmp, sizeof(tmp),
+							UNIT_NONE);
+				}
 				field->print_routine(
 					field,
-					tmp_char,
+					tmp,
 					(curr_inx == field_count));
-				xfree(tmp_char);
 				break;
 			case PRINT_DURATION:
 				if (!newend)
@@ -719,6 +734,15 @@ extern int sacctmgr_list_event(int argc, char *argv[])
 				field->print_routine(field,
 						     tmp_char,
 						     (curr_inx == field_count));
+				break;
+			case PRINT_TRES:
+				tmp_char = slurmdb_make_tres_string(
+					event->tres);
+				field->print_routine(
+					field,
+					tmp_char,
+					(curr_inx == field_count));
+				xfree(tmp_char);
 				break;
 			case PRINT_USER:
 				if (event->reason_uid != NO_VAL) {
